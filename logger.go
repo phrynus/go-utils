@@ -25,7 +25,7 @@ const (
 type LogConfig struct {
 	Filename     string       // 日志文件名
 	LogDir       string       // 日志目录
-	MaxSize      int          // 日志文件最大大小(MB)
+	MaxSize      int          // 日志文件最大大小(KB)
 	StdoutLevels map[int]bool // 输出到标准输出的日志级别
 	ColorOutput  bool         // 是否启用彩色输出
 }
