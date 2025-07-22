@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ type LogConfig struct {
 	MaxSize      int          // 日志文件最大大小(KB)
 	StdoutLevels map[int]bool // 输出到标准输出的日志级别
 	ColorOutput  bool         // 是否启用彩色输出
+	ShowFileLine bool         // 是否显示文件名和行号
 }
 
 // Logger 日志记录器结构体
@@ -133,10 +135,21 @@ func (l *Logger) log(level int, format string, args ...interface{}) {
 	}
 
 	now := time.Now()
-	logEntry := fmt.Sprintf("[PHRYNUS][%s %s][%s] %s\n",
+
+	var fileLine string
+	if l.config.ShowFileLine {
+		_, file, line, ok := runtime.Caller(2) // 2表示调用栈的深度，跳过log和Info/Debug等函数
+		if ok {
+			file = filepath.Base(file) // 只取短文件名
+			fileLine = fmt.Sprintf("%s:%d ", file, line)
+		}
+	}
+
+	logEntry := fmt.Sprintf("[PHRYNUS][%s %s][%s] %s%s\n",
 		now.Format("2006/01/02"),
 		now.Format("15:04:05.000"),
 		levelNames[level],
+		fileLine,
 		msg)
 
 	l.buffer.WriteString(logEntry)
@@ -147,9 +160,14 @@ func (l *Logger) log(level int, format string, args ...interface{}) {
 			if c, ok := l.colorMap[level]; ok {
 				codeLevel := fmt.Sprintf("[%s]", levelNames[level])
 				title := fmt.Sprintf("[%s]", now.Format("15:04:05.000"))
-				consoleOutput = fmt.Sprintf("%s%s %s\n",
+				fileLineStr := ""
+				if l.config.ShowFileLine {
+					fileLineStr = fileLine
+				}
+				consoleOutput = fmt.Sprintf("%s%s %s%s\n",
 					l.colorMap[4].Sprint(title),
 					c.Sprint(codeLevel),
+					fileLineStr,
 					msg)
 			}
 		}
