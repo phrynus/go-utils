@@ -4,38 +4,50 @@ import (
 	"fmt"
 )
 
-// TaRMA 相对移动平均线(Relative Moving Average)指标结果结构体
+// TaRMA 表示平滑移动平均线(Running Moving Average)的计算结果
 // 说明：
 //
-//	存储RMA计算结果及相关参数，提供多种基于RMA的技术分析方法
-//
-// 字段：
-//   - Values: RMA计算结果数组 ([]float64)
-//   - Period: 计算周期 (int)
+//	RMA是一种特殊的指数移动平均线：
+//	1. 使用Wilder平滑法计算
+//	2. 相比EMA具有更强的平滑效果
+//	3. 常用于RSI等技术指标的计算
+//	特点：
+//	- 平滑度高于简单移动平均线
+//	- 对异常值的敏感度较低
+//	- 计算过程中不会丢失历史信息
+//	- 适合用于波动较大的市场
 type TaRMA struct {
-	Values []float64 `json:"values"`
-	Period int       `json:"period"`
+	Values []float64 `json:"values"` // RMA值序列
+	Period int       `json:"period"` // 计算周期
 }
 
-// CalculateRMA 计算相对移动平均线(RMA)
+// CalculateRMA 计算平滑移动平均线
+// 说明：
+//
+//	计算步骤：
+//	1. 设定平滑系数 alpha = 1/period
+//	2. 第一个值直接使用原始数据
+//	3. 后续值使用公式：
+//	   RMA = alpha * 当前值 + (1 - alpha) * 前一期RMA
+//	应用场景：
+//	- 用于计算RSI等技术指标
+//	- 平滑价格波动
+//	- 识别中长期趋势
+//	- 过滤市场噪音
+//
 // 参数：
-//   - prices: 价格数据数组 ([]float64)
-//   - period: 计算周期 (int)
+//   - prices: 价格序列
+//   - period: 计算周期，常用值：
+//   - RSI计算时通常为14
+//   - 趋势跟踪时可选20-60
 //
 // 返回值：
-//   - *TaRMA: RMA计算结果对象
-//   - error: 错误信息，若输入数据不足则返回错误
-//
-// 说明/注意事项：
-//
-//	RMA是一种平滑的移动平均线，与EMA类似但计算方式略有不同
-//	计算公式：RMA[i] = alpha * price[i] + (1-alpha) * RMA[i-1]，其中alpha=1/period
-//	要求输入价格数据长度不小于计算周期
+//   - *TaRMA: 包含RMA计算结果的结构体指针
+//   - error: 计算过程中的错误，如数据不足等
 //
 // 示例：
 //
-//	prices := []float64{10.0, 11.0, 12.0, 13.0, 14.0}
-//	rma, err := CalculateRMA(prices, 3)
+//	rma, err := CalculateRMA(prices, 14)
 func CalculateRMA(prices []float64, period int) (*TaRMA, error) {
 	if len(prices) < period {
 		return nil, fmt.Errorf("计算数据不足")
@@ -59,19 +71,18 @@ func CalculateRMA(prices []float64, period int) (*TaRMA, error) {
 	}, nil
 }
 
-// RMA 从K线数据中提取指定源数据并计算RMA
+// RMA 为K线数据计算平滑移动平均线
+// 说明：
+//
+//	对指定价格类型计算RMA指标
+//
 // 参数：
-//   - period: 计算周期 (int)
-//   - source: 数据源字段名 (string)
+//   - period: 计算周期
+//   - source: 价格类型，支持"open"、"high"、"low"、"close"等
 //
 // 返回值：
-//   - *TaRMA: RMA计算结果对象
-//   - error: 错误信息
-//
-// 说明/注意事项：
-//
-//	该方法是KlineDatas结构体的成员方法，用于便捷地从K线数据计算RMA
-//	支持的数据源字段由ExtractSlice方法决定
+//   - *TaRMA: 包含RMA计算结果的结构体指针
+//   - error: 计算过程中的错误
 func (k *KlineDatas) RMA(period int, source string) (*TaRMA, error) {
 	prices, err := k.ExtractSlice(source)
 	if err != nil {
@@ -80,9 +91,18 @@ func (k *KlineDatas) RMA(period int, source string) (*TaRMA, error) {
 	return CalculateRMA(prices, period)
 }
 
-// Value 获取RMA的最新值
+// Value 获取最新的RMA值
+// 说明：
+//
+//	返回最新的RMA值
+//	使用建议：
+//	- 可作为动态支撑位和阻力位
+//	- 价格上穿RMA视为上升趋势确立
+//	- 价格下穿RMA视为下降趋势确立
+//	- 与其他指标配合使用效果更好
+//
 // 返回值：
-//   - float64: RMA数组中的最后一个值
+//   - float64: 最新的RMA值
 func (t *TaRMA) Value() float64 {
 	return t.Values[len(t.Values)-1]
 }

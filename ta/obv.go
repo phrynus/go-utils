@@ -4,36 +4,49 @@ import (
 	"fmt"
 )
 
-// TaOBV 用于存储 OBV 指标计算结果的结构体
+// TaOBV 表示能量潮指标(On Balance Volume)的计算结果
 // 说明：
 //
-//	该结构体用于存储 OBV 指标的计算结果，`Values` 字段保存了每个时间点的 OBV 值。
-//
-// 字段：
-//   - Values: 存储 OBV 指标值的切片 (float64 类型)
+//	OBV是由Joe Granville开发的成交量指标：
+//	1. 通过成交量来确认价格趋势
+//	2. 判断成交量是否支撑价格走势
+//	3. 可以预测价格突破的可能性
+//	特点：
+//	- 将成交量的变化与价格方向相结合
+//	- 可以发现量价关系的背离
+//	- 帮助判断趋势的强弱
+//	- 适合寻找主力资金进出的迹象
 type TaOBV struct {
-	Values []float64 `json:"values"`
+	Values []float64 `json:"values"` // OBV值序列
 }
 
-// CalculateOBV 计算 OBV 指标值
+// CalculateOBV 计算能量潮指标
+// 说明：
+//
+//	计算规则：
+//	1. 当收盘价上涨时：
+//	   当日OBV = 前一日OBV + 当日成交量
+//	2. 当收盘价下跌时：
+//	   当日OBV = 前一日OBV - 当日成交量
+//	3. 当收盘价不变时：
+//	   当日OBV = 前一日OBV
+//	使用场景：
+//	- 判断量价配合程度
+//	- 预测价格突破方向
+//	- 发现趋势的强弱
+//	- 识别主力资金动向
+//
 // 参数：
-//   - prices: 价格数据切片 (float64 类型)
-//   - volumes: 成交量数据切片 (float64 类型)
+//   - prices: 价格序列（通常使用收盘价）
+//   - volumes: 成交量序列
 //
 // 返回值：
-//   - *TaOBV: 存储 OBV 指标计算结果的结构体指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//   - 输入的 `prices` 和 `volumes` 切片长度必须一致，否则会返回错误。
-//   - 输入数据长度至少为 2，否则会返回错误。
+//   - *TaOBV: 包含OBV计算结果的结构体指针
+//   - error: 计算过程中的错误，如数据不足等
 //
 // 示例：
 //
 //	obv, err := CalculateOBV(prices, volumes)
-//	if err != nil {
-//	    // 处理错误
-//	}
 func CalculateOBV(prices, volumes []float64) (*TaOBV, error) {
 	if len(prices) != len(volumes) {
 		return nil, fmt.Errorf("输入数据长度不一致")
@@ -60,17 +73,17 @@ func CalculateOBV(prices, volumes []float64) (*TaOBV, error) {
 	}, nil
 }
 
-// OBV 从 KlineDatas 中提取收盘价和成交量数据并计算 OBV 指标值
+// OBV 为K线数据计算能量潮指标
+// 说明：
+//
+//	使用收盘价和成交量计算OBV指标
+//
 // 参数：
-//   - source: 数据源标识 (string 类型)
+//   - source: 价格类型（此参数在OBV计算中实际未使用，保留是为了接口一致性）
 //
 // 返回值：
-//   - *TaOBV: 存储 OBV 指标计算结果的结构体指针
-//   - error: 提取数据或计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//   - 该方法会从 `KlineDatas` 中提取 `close` 和 `volume` 数据进行计算。
-//   - 若提取数据过程中出现错误，会返回相应的错误信息。
+//   - *TaOBV: 包含OBV计算结果的结构体指针
+//   - error: 计算过程中的错误
 func (k *KlineDatas) OBV(source string) (*TaOBV, error) {
 	close, err := k.ExtractSlice("close")
 	if err != nil {
@@ -83,12 +96,20 @@ func (k *KlineDatas) OBV(source string) (*TaOBV, error) {
 	return CalculateOBV(close, volume)
 }
 
-// Value 获取 TaOBV 结构体中 OBV 指标的最后一个值
-// 返回值：
-//   - float64: OBV 指标的最后一个值
+// Value 获取最新的OBV值
+// 说明：
 //
-// 说明/注意事项：
-//   - 若 `Values` 切片为空，可能会导致数组越界错误。
+//	返回最新的OBV值
+//	使用建议：
+//	- OBV上升，表明买方力量占优
+//	- OBV下降，表明卖方力量占优
+//	- OBV与价格同向变动，趋势更可靠
+//	- 背离信号：
+//	  * 顶背离：价格创新高但OBV未创新高，可能即将下跌
+//	  * 底背离：价格创新低但OBV未创新低，可能即将上涨
+//
+// 返回值：
+//   - float64: 最新的OBV值
 func (t *TaOBV) Value() float64 {
 	return t.Values[len(t.Values)-1]
 }

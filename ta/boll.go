@@ -5,41 +5,48 @@ import (
 	"math"
 )
 
-// TaBoll 表示布林带指标的计算结果
+// TaBoll 表示布林带(Bollinger Bands)的计算结果
 // 说明：
 //
-//	布林带指标由上轨、中轨和下轨组成，用于衡量价格波动的范围和趋势
-//
-// 字段：
-//   - Upper: 布林带上轨的值数组
-//   - Mid: 布林带中轨的值数组
-//   - Lower: 布林带下轨的值数组
+//	布林带是由John Bollinger开发的技术分析工具，包含三条轨道线：
+//	1. 中轨：N周期简单移动平均线(SMA)
+//	2. 上轨：中轨 + K倍标准差
+//	3. 下轨：中轨 - K倍标准差
+//	特点：
+//	- 价格通常在上下轨道之间波动
+//	- 轨道宽度反映市场波动性
+//	- 可用于判断超买超卖和趋势强度
 type TaBoll struct {
-	Upper []float64 `json:"upper"`
-	Mid   []float64 `json:"mid"`
-	Lower []float64 `json:"lower"`
+	Upper []float64 `json:"upper"` // 上轨线序列
+	Mid   []float64 `json:"mid"`   // 中轨线序列（移动平均线）
+	Lower []float64 `json:"lower"` // 下轨线序列
 }
 
 // CalculateBoll 计算布林带指标
+// 说明：
+//
+//	计算步骤：
+//	1. 计算中轨（简单移动平均线）
+//	2. 计算标准差：
+//	   - 计算每个价格与移动平均线的差值
+//	   - 计算差值的平方和
+//	   - 计算平方和的均值并开方
+//	3. 计算上下轨：
+//	   - 上轨 = 中轨 + K倍标准差
+//	   - 下轨 = 中轨 - K倍标准差
+//
 // 参数：
-//   - prices: 价格数据数组
-//   - period: 计算周期
-//   - stdDev: 标准差倍数
+//   - prices: 价格序列
+//   - period: 计算周期，通常为20
+//   - stdDev: 标准差倍数，通常为2
 //
 // 返回值：
-//   - *TaBoll: 布林带指标的计算结果指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//
-//	当输入的价格数据长度小于计算周期时，会返回错误
+//   - *TaBoll: 包含布林带计算结果的结构体指针
+//   - error: 计算过程中的错误，如数据不足等
 //
 // 示例：
 //
-//	boll, err := CalculateBoll(prices, 20, 2)
-//	if err != nil {
-//	    // 处理错误
-//	}
+//	boll, err := CalculateBoll(prices, 20, 2.0)
 func CalculateBoll(prices []float64, period int, stdDev float64) (*TaBoll, error) {
 
 	if len(prices) < period {
@@ -90,19 +97,19 @@ func CalculateBoll(prices []float64, period int, stdDev float64) (*TaBoll, error
 	}, nil
 }
 
-// Boll 为 KlineDatas 类型计算布林带指标
+// Boll 为K线数据计算布林带指标
+// 说明：
+//
+//	对指定价格类型计算布林带指标
+//
 // 参数：
 //   - period: 计算周期
 //   - stdDev: 标准差倍数
-//   - source: 价格数据来源
+//   - source: 价格类型，支持"open"、"high"、"low"、"close"等
 //
 // 返回值：
-//   - *TaBoll: 布林带指标的计算结果指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//
-//	会调用 ExtractSlice 方法提取价格数据，若提取失败会返回错误
+//   - *TaBoll: 包含布林带计算结果的结构体指针
+//   - error: 计算过程中的错误
 func (k *KlineDatas) Boll(period int, stdDev float64, source string) (*TaBoll, error) {
 	prices, err := k.ExtractSlice(source)
 	if err != nil {
@@ -111,11 +118,20 @@ func (k *KlineDatas) Boll(period int, stdDev float64, source string) (*TaBoll, e
 	return CalculateBoll(prices, period, stdDev)
 }
 
-// Value 返回布林带指标的最后一个值
+// Value 获取最新的布林带值
+// 说明：
+//
+//	返回最新的上中下轨值
+//	使用建议：
+//	- 价格突破上轨可能表示超买
+//	- 价格突破下轨可能表示超卖
+//	- 轨道收窄预示行情即将剧烈波动
+//	- 轨道变宽表示波动性增加
+//
 // 返回值：
-//   - upper: 布林带上轨的最后一个值
-//   - mid: 布林带中轨的最后一个值
-//   - lower: 布林带下轨的最后一个值
+//   - upper: 上轨值
+//   - mid: 中轨值
+//   - lower: 下轨值
 func (t *TaBoll) Value() (upper, mid, lower float64) {
 	lastIndex := len(t.Upper) - 1
 	return t.Upper[lastIndex], t.Mid[lastIndex], t.Lower[lastIndex]

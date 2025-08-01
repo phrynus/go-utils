@@ -4,42 +4,52 @@ import (
 	"fmt"
 )
 
-// TaCMF 用于计算资金流量指标（Chaikin Money Flow）的结构体
+// TaCMF 表示钱德动量指标(Chaikin Money Flow)的计算结果
 // 说明：
 //
-//	该结构体存储了计算得到的 CMF 值以及计算时使用的周期
-//
-// 字段：
-//   - Values: 存储计算得到的 CMF 值的切片 (float64 类型)
-//   - Period: 计算 CMF 时使用的周期 (int 类型)
+//	CMF是由Marc Chaikin开发的技术分析工具：
+//	1. 结合了价格和成交量的动量指标
+//	2. 用于衡量资金流入和流出的强度
+//	3. 可以预测价格趋势的持续性
+//	特点：
+//	- 取值范围在-1到+1之间
+//	- 正值表示资金流入（看多）
+//	- 负值表示资金流出（看空）
+//	- 绝对值越大表示资金流动越强烈
 type TaCMF struct {
-	Values []float64 `json:"values"`
-	Period int       `json:"period"`
+	Values []float64 `json:"values"` // CMF值序列
+	Period int       `json:"period"` // 计算周期
 }
 
-// CalculateCMF 计算资金流量指标（Chaikin Money Flow）
+// CalculateCMF 计算钱德动量指标
+// 说明：
+//
+//	计算步骤：
+//	1. 计算资金流量乘数(MFM)：
+//	   MFM = ((收盘价-最低价)-(最高价-收盘价))/(最高价-最低价)
+//	2. 计算资金流量(MFV)：
+//	   MFV = MFM * 成交量
+//	3. 计算CMF：
+//	   CMF = N周期MFV之和 / N周期成交量之和
+//	使用场景：
+//	- 判断主力资金流向
+//	- 预测价格趋势持续性
+//	- 识别潜在的趋势反转
+//
 // 参数：
-//   - high: 最高价数组
-//   - low: 最低价数组
-//   - close: 收盘价数组
-//   - volume: 成交量数组
-//   - period: 计算周期
+//   - high: 最高价序列
+//   - low: 最低价序列
+//   - close: 收盘价序列
+//   - volume: 成交量序列
+//   - period: 计算周期，通常为20或21
 //
 // 返回值：
-//   - *TaCMF: 存储计算结果的 TaCMF 结构体指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//
-//	输入的 high、low、close 和 volume 数组长度必须一致
-//	输入数据长度必须大于等于计算周期
+//   - *TaCMF: 包含CMF计算结果的结构体指针
+//   - error: 计算过程中的错误，如数据不足等
 //
 // 示例：
 //
-//	cmf, err := CalculateCMF(highPrices, lowPrices, closePrices, volumes, 20)
-//	if err != nil {
-//	    // 处理错误
-//	}
+//	cmf, err := CalculateCMF(high, low, close, volume, 20)
 func CalculateCMF(high, low, close, volume []float64, period int) (*TaCMF, error) {
 	if len(high) != len(low) || len(high) != len(close) || len(high) != len(volume) {
 		return nil, fmt.Errorf("输入数据长度不一致")
@@ -79,26 +89,18 @@ func CalculateCMF(high, low, close, volume []float64, period int) (*TaCMF, error
 	}, nil
 }
 
-// CMF 从 KlineDatas 结构体中提取数据并计算资金流量指标（Chaikin Money Flow）
+// CMF 为K线数据计算钱德动量指标
+// 说明：
+//
+//	对当前K线数据计算CMF指标
+//
 // 参数：
 //   - period: 计算周期
-//   - source: 数据源标识
+//   - source: 价格类型（此参数在CMF计算中实际未使用，保留是为了接口一致性）
 //
 // 返回值：
-//   - *TaCMF: 存储计算结果的 TaCMF 结构体指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//
-//	该方法会调用 KlineDatas 的 ExtractSlice 方法提取数据
-//	提取数据过程中可能会出现错误
-//
-// 示例：
-//
-//	cmf, err := klineDatas.CMF(20, "source")
-//	if err != nil {
-//	    // 处理错误
-//	}
+//   - *TaCMF: 包含CMF计算结果的结构体指针
+//   - error: 计算过程中的错误
 func (k *KlineDatas) CMF(period int, source string) (*TaCMF, error) {
 	high, err := k.ExtractSlice("high")
 	if err != nil {
@@ -119,13 +121,19 @@ func (k *KlineDatas) CMF(period int, source string) (*TaCMF, error) {
 	return CalculateCMF(high, low, close, volume, period)
 }
 
-// Value 获取 TaCMF 结构体中最后一个 CMF 值
+// Value 获取最新的CMF值
+// 说明：
+//
+//	返回最新的CMF值
+//	使用建议：
+//	- CMF > 0.25 表示强势买入信号
+//	- CMF < -0.25 表示强势卖出信号
+//	- CMF在0线附近徘徊表示盘整
+//	- CMF与价格的背离可能预示趋势反转
+//	- 连续3个周期保持同向为较强信号
+//
 // 返回值：
-//   - float64: 最后一个 CMF 值
-//
-// 示例：
-//
-//	value := cmf.Value()
+//   - float64: 最新的CMF值
 func (t *TaCMF) Value() float64 {
 	return t.Values[len(t.Values)-1]
 }

@@ -6,26 +6,28 @@
 
 ## 项目结构
 
-- adx.go : ADX(平均趋向指标)
-- atr.go : ATR(平均真实波幅)
-  - Percent 计算最新的 ATR 值相对于当前价格的百分比
-- boll.go : BOLL(布林带)
-- cci.go : CCI(顺势指标)
-- cmf.go : CMF(蔡金货币流量)
-- ema.go : EMA(指数移动平均线)
-- kdj.go : KDJ(随机指标)
-- macd.go : MACD(移动平均趋势指标)
-- obv.go : OBV(能量潮指标)
-- rma.go : RMA(移动平均)
-- rsi.go : RSI(相对强弱指标)
-- sma.go : SMA(简单移动平均线)
-- stochRsi.go : Stochastic RSI(随机相对强弱指标)
-- superTrend.go : SuperTrend(超级趋势指标)
-- superTrendPivot.go : SuperTrend的轴点计算实现
-- superTrendPivotHl2.go : SuperTrend的HL2轴点计算实现
 - ta.go : 核心数据结构和通用工具函数
-- t3.go : T3(三重指数移动平均线)
-- vr.go : 波动比率指标
+
+- adx.go : ADX (平均趋向指标)
+  - CrossOver 检测DI线的交叉信号
+- atr.go : ATR(平均真实波幅)
+  - Percent 计算ATR相对于当前价格的百分比
+- boll.go : BOLL (布林带)
+- cci.go : CCI (商品通道指标)
+- cmf.go : CMF (钱德动量指标)
+- ema.go : EMA (指数移动平均线)
+- kdj.go : KDJ (随机指标)
+- macd.go : MACD (移动平均趋势指标)
+- obv.go : OBV (能量潮指标)
+- rma.go : RMA (移动平均)
+- rsi.go : RSI (相对强弱指标)
+- sma.go : SMA (简单移动平均线)
+- stochRsi.go : Stochastic RSI (随机相对强弱指标)
+- superTrend.go : SuperTrend (超级趋势指标)
+- superTrendPivot.go : SuperTrendPivot (基于轴点的超级趋势指标)
+- superTrendPivotHl2.go : SuperTrendPivotHl2 (基于HL2的超级趋势指标)
+- t3.go : T3 (Tillson T3移动平均线)
+- vr.go : VR (波动率比率指标)
 - williamsR.go : Williams %R(威廉指标)
 
 ## 使用示例

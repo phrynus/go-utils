@@ -4,47 +4,56 @@ import (
 	"fmt"
 )
 
-// TaKDJ 表示 KDJ 指标的计算结果结构体
+// TaKDJ 表示随机指标(Stochastic Oscillator)的计算结果
 // 说明：
 //
-//	该结构体用于存储 KDJ 指标的计算结果，包含 K、D、J 三条线的值
-//
-// 字段：
-//   - K: K 线的值数组 (float64 类型)
-//   - D: D 线的值数组 (float64 类型)
-//   - J: J 线的值数组 (float64 类型)
+//	KDJ是一个超买超卖指标，也叫随机指标：
+//	1. K值：快速线，对价格变化反应最敏感
+//	2. D值：慢速线，是K值的移动平均
+//	3. J值：方向线，反映K值与D值的偏离程度
+//	特点：
+//	- 取值范围一般在0-100之间（J线可能超出）
+//	- 80以上为超买区
+//	- 20以下为超卖区
+//	- 常用于预测价格走势反转
 type TaKDJ struct {
-	K []float64 `json:"k"`
-	D []float64 `json:"d"`
-	J []float64 `json:"j"`
+	K []float64 `json:"k"` // K值序列（快速线）
+	D []float64 `json:"d"` // D值序列（慢速线）
+	J []float64 `json:"j"` // J值序列（方向线）
 }
 
-// CalculateKDJ 计算 KDJ 指标
+// CalculateKDJ 计算随机指标
+// 说明：
+//
+//	计算步骤：
+//	1. 计算RSV值：
+//	   RSV = (收盘价 - N日最低价) / (N日最高价 - N日最低价) * 100
+//	2. 计算K值：
+//	   当日K = (2 * 前日K + 当日RSV) / 3
+//	3. 计算D值：
+//	   当日D = (2 * 前日D + 当日K) / 3
+//	4. 计算J值：
+//	   J = 3 * K - 2 * D
+//	应用场景：
+//	- 判断超买超卖
+//	- 预测趋势反转
+//	- 寻找背离信号
+//
 // 参数：
-//   - high: 最高价数组
-//   - low: 最低价数组
-//   - close: 收盘价数组
-//   - rsvPeriod: RSV 的计算周期
-//   - kPeriod: K 线的计算周期
-//   - dPeriod: D 线的计算周期
+//   - high: 最高价序列
+//   - low: 最低价序列
+//   - close: 收盘价序列
+//   - rsvPeriod: RSV计算周期，通常为9
+//   - kPeriod: K值计算周期，通常为3
+//   - dPeriod: D值计算周期，通常为3
 //
 // 返回值：
-//   - *TaKDJ: 包含 KDJ 指标计算结果的结构体指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//
-//	输入的 high、low、close 数组长度必须不小于 rsvPeriod，否则将返回错误
+//   - *TaKDJ: 包含KDJ计算结果的结构体指针
+//   - error: 计算过程中的错误，如数据不足等
 //
 // 示例：
 //
-//	high := []float64{...}
-//	low := []float64{...}
-//	close := []float64{...}
 //	kdj, err := CalculateKDJ(high, low, close, 9, 3, 3)
-//	if err != nil {
-//	    // 处理错误
-//	}
 func CalculateKDJ(high, low, close []float64, rsvPeriod, kPeriod, dPeriod int) (*TaKDJ, error) {
 	if len(high) < rsvPeriod || len(low) < rsvPeriod || len(close) < rsvPeriod {
 		return nil, fmt.Errorf("计算数据不足")
@@ -95,27 +104,19 @@ func CalculateKDJ(high, low, close []float64, rsvPeriod, kPeriod, dPeriod int) (
 	}, nil
 }
 
-// KDJ 计算 K 线数据的 KDJ 指标
+// KDJ 为K线数据计算随机指标
+// 说明：
+//
+//	对当前K线数据计算KDJ指标
+//
 // 参数：
-//   - rsvPeriod: RSV 的计算周期
-//   - kPeriod: K 线的计算周期
-//   - dPeriod: D 线的计算周期
+//   - rsvPeriod: RSV计算周期
+//   - kPeriod: K值计算周期
+//   - dPeriod: D值计算周期
 //
 // 返回值：
-//   - *TaKDJ: 包含 KDJ 指标计算结果的结构体指针
-//   - error: 计算过程中可能出现的错误
-//
-// 说明/注意事项：
-//
-//	该方法会从 KlineDatas 中提取 high、low、close 数据进行计算
-//
-// 示例：
-//
-//	klineData := &KlineDatas{...}
-//	kdj, err := klineData.KDJ(9, 3, 3)
-//	if err != nil {
-//	    // 处理错误
-//	}
+//   - *TaKDJ: 包含KDJ计算结果的结构体指针
+//   - error: 计算过程中的错误
 func (k *KlineDatas) KDJ(rsvPeriod, kPeriod, dPeriod int) (*TaKDJ, error) {
 	high, err := k.ExtractSlice("high")
 	if err != nil {
@@ -132,16 +133,22 @@ func (k *KlineDatas) KDJ(rsvPeriod, kPeriod, dPeriod int) (*TaKDJ, error) {
 	return CalculateKDJ(high, low, close, rsvPeriod, kPeriod, dPeriod)
 }
 
-// Value 获取 TaKDJ 结构体中 K、D、J 线的最后一个值
+// Value 获取最新的KDJ值
+// 说明：
+//
+//	返回最新的K、D、J三个值
+//	使用建议：
+//	- K值和D值在80以上，超买信号
+//	- K值和D值在20以下，超卖信号
+//	- K线上穿D线，金叉买入信号
+//	- K线下穿D线，死叉卖出信号
+//	- J值大于100或小于0时，反转信号增强
+//	- KDJ三线同向，趋势信号最强
+//
 // 返回值：
-//   - k: K 线的最后一个值
-//   - d: D 线的最后一个值
-//   - j: J 线的最后一个值
-//
-// 示例：
-//
-//	kdj := &TaKDJ{...}
-//	k, d, j := kdj.Value()
+//   - k: 最新的K值
+//   - d: 最新的D值
+//   - j: 最新的J值
 func (t *TaKDJ) Value() (k, d, j float64) {
 	lastIndex := len(t.K) - 1
 	return t.K[lastIndex], t.D[lastIndex], t.J[lastIndex]

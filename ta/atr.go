@@ -5,43 +5,48 @@ import (
 	"math"
 )
 
-// TaATR 平均真实波动范围（ATR）计算结果结构体
+// TaATR 表示平均真实波幅(Average True Range)的计算结果
 // 说明：
 //
-//	用于存储 ATR 计算过程中的相关数据，包括 ATR 值、计算周期和真实波动范围
-//
-// 字段：
-//   - Values: 每个时间点的 ATR 值切片
-//   - Period: ATR 计算所使用的周期
-//   - TrueRange: 每个时间点的真实波动范围切片
+//	ATR是衡量市场波动性的重要指标，由Welles Wilder开发：
+//	1. 不测量价格方向，只测量价格波动幅度
+//	2. 考虑了价格跳空的影响
+//	3. 可用于判断市场波动状态和设置止损位
+//	特点：
+//	- ATR值越大，表示市场波动越剧烈
+//	- ATR值越小，表示市场波动越平缓
+//	- 常用于确定止损距离和仓位大小
 type TaATR struct {
-	Values    []float64 `json:"values"`
-	Period    int       `json:"period"`
-	TrueRange []float64 `json:"true_range"`
+	Values    []float64 `json:"values"`     // ATR值序列
+	Period    int       `json:"period"`     // 计算周期
+	TrueRange []float64 `json:"true_range"` // 真实波幅序列
 }
 
-// CalculateATR 计算给定 K 线数据的平均真实波动范围（ATR）
+// CalculateATR 计算平均真实波幅
+// 说明：
+//
+//	计算步骤：
+//	1. 计算真实波幅(TR)：
+//	   TR = max(
+//	       当日最高价 - 当日最低价,
+//	       |当日最高价 - 前日收盘价|,
+//	       |当日最低价 - 前日收盘价|
+//	   )
+//	2. 计算ATR：
+//	   第一个ATR = 前period日TR的简单平均
+//	   之后的ATR = (前一日ATR * (period-1) + 当日TR) / period
+//
 // 参数：
-//   - klineData: K 线数据切片，包含每个时间点的高、低、收盘价等信息
-//   - period: ATR 计算所使用的周期
+//   - klineData: K线数据
+//   - period: 计算周期，通常为14
 //
 // 返回值：
-//   - *TaATR: 包含 ATR 计算结果的结构体指针
-//   - error: 计算过程中可能出现的错误，若计算数据不足则返回错误
-//
-// 说明/注意事项：
-//
-//	计算 ATR 时，需要至少 period 个 K 线数据。
-//	真实波动范围（TR）的计算基于当前时间点的最高价、最低价和上一个时间点的收盘价。
-//	初始 ATR 值为前 period 个 TR 的平均值，后续 ATR 值使用平滑公式计算。
+//   - *TaATR: 包含ATR计算结果的结构体指针
+//   - error: 计算过程中的错误，如数据不足等
 //
 // 示例：
 //
-//	klineData := ...
 //	atr, err := CalculateATR(klineData, 14)
-//	if err != nil {
-//	    log.Fatal(err)
-//	}
 func CalculateATR(klineData KlineDatas, period int) (*TaATR, error) {
 	if len(klineData) < period {
 		return nil, fmt.Errorf("计算数据不足")
@@ -80,70 +85,53 @@ func CalculateATR(klineData KlineDatas, period int) (*TaATR, error) {
 	}, nil
 }
 
-// ATR 计算 K 线数据的平均真实波动范围（ATR）
+// ATR 为K线数据计算平均真实波幅
+// 说明：
+//
+//	对当前K线数据计算ATR指标
+//
 // 参数：
-//   - period: ATR 计算所使用的周期
+//   - period: 计算周期
 //
 // 返回值：
-//   - *TaATR: 包含 ATR 计算结果的结构体指针
-//   - error: 计算过程中可能出现的错误，若计算数据不足则返回错误
-//
-// 说明/注意事项：
-//
-//	该方法是对 CalculateATR 函数的封装，直接作用于 KlineDatas 结构体实例。
-//
-// 示例：
-//
-//	klineData := ...
-//	atr, err := klineData.ATR(14)
-//	if err != nil {
-//	    log.Fatal(err)
-//	}
+//   - *TaATR: 包含ATR计算结果的结构体指针
+//   - error: 计算过程中的错误
 func (k *KlineDatas) ATR(period int) (*TaATR, error) {
 	return CalculateATR(*k, period)
 }
 
-// Value 返回 TaATR 结构体中最新的 ATR 值
+// Value 获取最新的ATR值
+// 说明：
+//
+//	返回最新的ATR值
+//	使用建议：
+//	- 可用于设置动态止损位置
+//	- 可用于调整交易仓位大小
+//	- 可用于判断市场波动状态
+//
 // 返回值：
-//   - float64: 最新的 ATR 值
-//
-// 说明/注意事项：
-//
-//	若 Values 切片为空，可能会引发越界错误，使用前需确保数据有效。
-//
-// 示例：
-//
-//	atr := ...
-//	latestATR := atr.Value()
+//   - float64: 最新的ATR值
 func (t *TaATR) Value() float64 {
 	return t.Values[len(t.Values)-1]
 }
 
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-// Percent 计算最新的 ATR 值相对于当前价格的百分比
+// Percent 计算ATR相对于当前价格的百分比
+// 说明：
+//
+//	计算ATR值占当前价格的百分比，用于：
+//	1. 评估价格波动的相对幅度
+//	2. 设置百分比止损位置
+//	3. 对不同价位的品种进行波动性比较
+//
 // 参数：
 //   - currentPrice: 当前价格
 //
 // 返回值：
-//   - float64: ATR 占当前价格的百分比值（以小数形式返回，例如 0.05 表示 5%）
-//
-// 说明/注意事项：
-//
-//	该方法将最新的 ATR 值除以当前价格，得到百分比。
-//	返回值为小数形式，需要乘以 100 才是实际的百分比数值。
-//
-// 示例：
-//
-//	atr := ...
-//	percent := atr.Percent(100.0) // 如果 ATR 值为 5，则返回 0.05，表示 5%
+//   - float64: ATR占当前价格的百分比
+//     注意：如果当前价格小于等于0，返回0
 func (t *TaATR) Percent(currentPrice float64) float64 {
 	if currentPrice <= 0 {
 		return 0
 	}
-	return t.Value() / currentPrice
+	return t.Value() / currentPrice * 100
 }
