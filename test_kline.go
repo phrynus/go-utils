@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -19,8 +18,7 @@ func main() {
 
 	// 如果没有设置环境变量，请提示用户
 	if apiKey == "" || secretKey == "" {
-		log.Println("警告: 未设置 BINANCE_API_KEY 或 BINANCE_SECRET_KEY 环境变量")
-		log.Println("继续使用公共API（有请求限制）...")
+		fmt.Println("=========== 使用公共API ===========")
 	}
 
 	// 创建合约客户端
@@ -32,12 +30,12 @@ func main() {
 
 // testFuturesKline 测试获取合约K线并计算技术指标
 func testFuturesKline(client *futures.Client) {
-	fmt.Println("\n======= 获取合约市场K线数据 =======")
+	fmt.Println("======= 获取合约市场K线数据 =======\n")
 
 	// 设置参数
-	symbol := "BTCUSDT"
-	interval := "15m"
-	limit := 600
+	symbol := "ETHUSDT"
+	interval := "30m"
+	limit := 1000
 
 	// 获取K线数据
 	klines, err := client.NewKlinesService().
@@ -47,15 +45,17 @@ func testFuturesKline(client *futures.Client) {
 		Do(context.Background())
 
 	if err != nil {
-		log.Fatalf("获取合约K线失败: %v", err)
+		fmt.Printf("获取合约K线失败: %v\n", err)
+		return
 	}
 
 	fmt.Printf("成功获取 %s %s 周期K线 %d 根\n", symbol, interval, len(klines))
 
 	// 转换为ta库的KlineDatas格式
-	klineDatas, err := ta.NewKlineDatas(klines, false)
+	klineDatas, err := ta.NewKlineDatas(klines, true)
 	if err != nil {
-		log.Fatalf("转换K线数据失败: %v", err)
+		fmt.Printf("转换K线数据失败: %v", err)
+		return
 	}
 
 	// 计算技术指标
@@ -66,13 +66,42 @@ func testFuturesKline(client *futures.Client) {
 func calculateIndicators(klineDatas ta.KlineDatas, symbol, interval string) {
 	// 获取最近的K线时间
 	lastTime := time.Unix(0, klineDatas[len(klineDatas)-1].StartTime*int64(time.Millisecond))
-	fmt.Printf("最后一根K线时间: %s\n", lastTime.Format("2006-01-02 15:04:05"))
+	fmt.Printf("最后一根K线开始时间: %s\n\n", lastTime.Format("2006-01-02 15:04:05"))
 
-	dpo, err := klineDatas.DPO("close", 15, 19, 11, 3)
+	ema, err := klineDatas.EMA(25, "close")
 	if err != nil {
-		log.Fatalf("计算DPO失败: %v", err)
+		fmt.Printf("计算EMA失败: %v", err)
+		return
 	}
-	// func (t *ta.TaDpo) Value() (short float64, long float64, diff float64, high float64, low float64, mid float64)
-	short, long, diff, high, low, mid := dpo.Value()
-	fmt.Printf("DPO: %v, %v, %v, %v, %v, %v\n", short, long, diff, high, low, mid)
+
+	ema2, err := klineDatas.EMA(25*2, "close")
+	if err != nil {
+		fmt.Printf("计算EMA失败: %v", err)
+		return
+	}
+
+	ema3, err := klineDatas.EMA(25*3, "close")
+	if err != nil {
+		fmt.Printf("计算EMA失败: %v", err)
+		return
+	}
+
+	fmt.Printf("ema: %v\n", ema.Value())
+	fmt.Printf("ema2: %v\n", ema2.Value())
+	fmt.Printf("ema3: %v\n", ema3.Value())
+
+	obv, err := klineDatas.OBV("close")
+	if err != nil {
+		fmt.Printf("计算OBV失败: %v", err)
+		return
+	}
+	fmt.Printf("obv: %v\n", obv.Value())
+
+	jingzhema, err := klineDatas.JingZheMA(25, 6)
+	if err != nil {
+		fmt.Printf("计算DPO失败: %v", err)
+		return
+	}
+	cond1, cond2, cond3, cond4, cond5 := jingzhema.Value()
+	fmt.Printf("%v, %v, %v, %v, %v\n", cond1, cond2, cond3, cond4, cond5)
 }

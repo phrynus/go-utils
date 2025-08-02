@@ -15,7 +15,9 @@
 - boll.go : BOLL (布林带)
 - cci.go : CCI (商品通道指标)
 - cmf.go : CMF (钱德动量指标)
+- dpo.go : Dpo (偏离价格振荡器)
 - ema.go : EMA (指数移动平均线)
+- jingzheMA.go : JingZheMA (惊蛰均线)
 - kdj.go : KDJ (随机指标)
 - macd.go : MACD (移动平均趋势指标)
 - obv.go : OBV (能量潮指标)
@@ -61,6 +63,12 @@ if err != nil {
 }
 
 atr, err := kline.ATR(14)
+if err != nil {
+    log.Fatal(err)
+}
+
+// 惊蛰均线示例
+jzma, err := kline.JingZheMA(25, 6)
 if err != nil {
     log.Fatal(err)
 }
