@@ -18,9 +18,9 @@ import (
 //	- 适合波动较大的市场
 type TaSuperTrendPivotHl2 struct {
 	Values     []float64 `json:"values"`     // 指标值序列，上涨趋势时为下轨，下跌趋势时为上轨
-	Direction  []int     `json:"direction"`  // 趋势方向：1表示上涨，-1表示下跌，0表示初始状态
-	UpperBand  []float64 `json:"upper_band"` // 上轨线序列
-	LowerBand  []float64 `json:"lower_band"` // 下轨线序列
+	Trend      []int     `json:"direction"`  // 趋势方向：1表示上涨，-1表示下跌，0表示初始状态
+	Upper      []float64 `json:"upper_band"` // 上轨线序列
+	Lower      []float64 `json:"lower_band"` // 下轨线序列
 	Period     int       `json:"period"`     // ATR计算周期
 	Multiplier float64   `json:"multiplier"` // ATR乘数，用于调整轨道宽度
 }
@@ -63,8 +63,9 @@ func CalculateSuperTrendPivotHl2(klineData KlineDatas, period int, multiplier fl
 		return nil, err
 	}
 
-	slices := preallocateSlices(length, 4)
-	values, direction, upperBand, lowerBand := slices[0], make([]int, length), slices[2], slices[3]
+	slices := preallocateSlices(length, 3)
+	values, upperBand, lowerBand := slices[0], slices[1], slices[2]
+	trend := make([]int, length)
 
 	for i := 0; i < length; i++ {
 
@@ -74,7 +75,7 @@ func CalculateSuperTrendPivotHl2(klineData KlineDatas, period int, multiplier fl
 
 			upperBand[i] = hl2 + multiplier*atr.Values[i]
 			lowerBand[i] = hl2 - multiplier*atr.Values[i]
-			direction[i] = 0
+			trend[i] = 0
 			values[i] = hl2
 			continue
 		}
@@ -94,21 +95,21 @@ func CalculateSuperTrendPivotHl2(klineData KlineDatas, period int, multiplier fl
 			upperBand[i] = upperBand[i-1]
 		}
 
-		if direction[i-1] <= 0 {
+		if trend[i-1] <= 0 {
 			if klineData[i].Close > upperBand[i] {
-				direction[i] = 1
+				trend[i] = 1
 			} else {
-				direction[i] = -1
+				trend[i] = -1
 			}
 		} else {
 			if klineData[i].Close < lowerBand[i] {
-				direction[i] = -1
+				trend[i] = -1
 			} else {
-				direction[i] = 1
+				trend[i] = 1
 			}
 		}
 
-		if direction[i] == 1 {
+		if trend[i] == 1 {
 			values[i] = lowerBand[i]
 		} else {
 			values[i] = upperBand[i]
@@ -117,9 +118,9 @@ func CalculateSuperTrendPivotHl2(klineData KlineDatas, period int, multiplier fl
 
 	return &TaSuperTrendPivotHl2{
 		Values:     values,
-		Direction:  direction,
-		UpperBand:  upperBand,
-		LowerBand:  lowerBand,
+		Trend:      trend,
+		Upper:      upperBand,
+		Lower:      lowerBand,
 		Period:     period,
 		Multiplier: multiplier,
 	}, nil
@@ -141,6 +142,23 @@ func (k *KlineDatas) SuperTrendPivotHl2(period int, multiplier float64) (*TaSupe
 	return CalculateSuperTrendPivotHl2(*k, period, multiplier)
 }
 
+// SuperTrendPivotHl2_ 获取最新的SuperTrendPivotHl2指标值
+// 参数：
+//   - period: ATR计算周期
+//   - multiplier: ATR乘数
+//
+// 返回值：
+//   - float64: 上轨值
+//   - float64: 下轨值
+//   - int: 趋势方向，1表示上涨，-1表示下跌，0表示初始状态
+func (k *KlineDatas) SuperTrendPivotHl2_(period int, multiplier float64) (float64, float64, int) {
+	superTrendPivotHl2, err := k.SuperTrendPivotHl2(period, multiplier)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return superTrendPivotHl2.Value()
+}
+
 // Value 获取最新的SuperTrendPivotHl2指标值
 // 说明：
 //
@@ -153,9 +171,12 @@ func (k *KlineDatas) SuperTrendPivotHl2(period int, multiplier float64) (*TaSupe
 //	- 价格跌破该线视为看空信号
 //
 // 返回值：
-//   - float64: 最新的指标值
-func (t *TaSuperTrendPivotHl2) Value() float64 {
-	return t.Values[len(t.Values)-1]
+//   - upper: 上轨值
+//   - lower: 下轨值
+//   - trend: 趋势方向，1表示上涨，-1表示下跌，0表示初始状态
+func (t *TaSuperTrendPivotHl2) Value() (upper, lower float64, trend int) {
+	last := len(t.Values) - 1
+	return t.Upper[last], t.Lower[last], t.Trend[last]
 }
 
 // ----------------------------------------------------------------------------

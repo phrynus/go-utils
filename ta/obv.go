@@ -78,13 +78,10 @@ func CalculateOBV(prices, volumes []float64) (*TaOBV, error) {
 //
 //	使用收盘价和成交量计算OBV指标
 //
-// 参数：
-//   - source: 价格类型（此参数在OBV计算中实际未使用，保留是为了接口一致性）
-//
 // 返回值：
 //   - *TaOBV: 包含OBV计算结果的结构体指针
 //   - error: 计算过程中的错误
-func (k *KlineDatas) OBV(source string) (*TaOBV, error) {
+func (k *KlineDatas) OBV() (*TaOBV, error) {
 	close, err := k.ExtractSlice("close")
 	if err != nil {
 		return nil, err
@@ -94,6 +91,17 @@ func (k *KlineDatas) OBV(source string) (*TaOBV, error) {
 		return nil, err
 	}
 	return CalculateOBV(close, volume)
+}
+
+// OBV_ 获取最新的OBV值
+// 返回值：
+//   - float64: 最新的OBV值
+func (k *KlineDatas) OBV_() float64 {
+	obv, err := k.OBV()
+	if err != nil {
+		return 0
+	}
+	return obv.Value()
 }
 
 // Value 获取最新的OBV值

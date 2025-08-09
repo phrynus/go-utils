@@ -118,6 +118,24 @@ func (k *KlineDatas) Boll(period int, stdDev float64, source string) (*TaBoll, e
 	return CalculateBoll(prices, period, stdDev)
 }
 
+// Boll_ 获取最新的布林带值
+// 参数：
+//   - period: 计算周期
+//   - stdDev: 标准差倍数
+//   - source: 价格类型
+//
+// 返回值：
+//   - float64: 最新的上轨值
+//   - float64: 最新的中轨值
+//   - float64: 最新的下轨值
+func (k *KlineDatas) Boll_(period int, stdDev float64, source string) (float64, float64, float64) {
+	boll, err := k.Boll(period, stdDev, source)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return boll.Value()
+}
+
 // Value 获取最新的布林带值
 // 说明：
 //

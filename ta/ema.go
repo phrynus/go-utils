@@ -98,6 +98,20 @@ func (k *KlineDatas) EMA(period int, source string) (*TaEMA, error) {
 	return CalculateEMA(prices, period)
 }
 
+// EMA_ 获取最新的EMA值
+// 参数：
+//   - period: 计算周期
+//
+// 返回值：
+//   - float64: 最新的EMA值
+func (k *KlineDatas) EMA_(period int) float64 {
+	ema, err := k.EMA(period, "close")
+	if err != nil {
+		return 0
+	}
+	return ema.Value()
+}
+
 // Value 获取最新的EMA值
 // 说明：
 //

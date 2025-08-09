@@ -151,6 +151,23 @@ func (k *KlineDatas) ADX(period int) (*TaADX, error) {
 	return CalculateADX(*k, period)
 }
 
+// ADX_ 获取最新的ADX、+DI和-DI值
+// 参数：
+//   - period: 计算周期
+//
+// 返回值：
+//   - float64: 最新的ADX值
+//   - float64: 最新的+DI值
+//   - float64: 最新的-DI值
+
+func (k *KlineDatas) ADX_(period int) (float64, float64, float64) {
+	tadx, err := k.ADX(period)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return tadx.Value()
+}
+
 // Value 获取最新的ADX、+DI和-DI值
 // 说明：
 //

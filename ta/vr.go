@@ -108,6 +108,21 @@ func (k KlineDatas) VolatilityRatio(shortPeriod, longPeriod int) (*TaVolatilityR
 	return CalculateVolatilityRatio(k, shortPeriod, longPeriod)
 }
 
+// VolatilityRatio_ 获取最新的波动率比率值
+// 参数：
+//   - shortPeriod: 短周期
+//   - longPeriod: 长周期
+//
+// 返回值：
+//   - float64: 最新的VR值
+func (k *KlineDatas) VolatilityRatio_(shortPeriod, longPeriod int) float64 {
+	volatilityRatio, err := k.VolatilityRatio(shortPeriod, longPeriod)
+	if err != nil {
+		return 0
+	}
+	return volatilityRatio.Value()
+}
+
 // Value 获取最新的波动率比率值
 // 说明：
 //

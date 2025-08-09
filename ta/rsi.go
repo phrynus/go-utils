@@ -106,6 +106,22 @@ func (k *KlineDatas) RSI(period int, source string) (*TaRSI, error) {
 	return CalculateRSI(prices, period)
 }
 
+// RSI_ 获取最新的RSI值
+// 参数：
+//   - period: RSI计算周期
+//   - source: 价格数据来源，可以是"close"、"open"、"high"、"low"等
+//
+// 返回值：
+//   - float64: 最新的RSI值
+func (k *KlineDatas) RSI_(period int, source string) float64 {
+	rsi, err := k.RSI(period, source)
+	if err != nil {
+		return 0
+	}
+	return rsi.Value()
+}
+
+
 // Value 获取最新的RSI值
 // 说明：
 //

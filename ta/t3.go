@@ -115,6 +115,22 @@ func (k *KlineDatas) T3(period int, vfact float64, source string) (*TaT3, error)
 	return CalculateT3(prices, period, vfact)
 }
 
+// T3_ 获取最新的T3值
+// 参数：
+//   - period: 计算周期
+//   - vfact: 体积因子
+//   - source: 价格数据来源
+//
+// 返回值：
+//   - float64: 最新的T3值
+func (k *KlineDatas) T3_(period int, vfact float64, source string) float64 {
+	t3, err := k.T3(period, vfact, source)
+	if err != nil {
+		return 0
+	}
+	return t3.Value()
+}
+
 // Value 获取最新的T3值
 // 说明：
 //

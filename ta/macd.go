@@ -113,6 +113,24 @@ func (k *KlineDatas) MACD(source string, shortPeriod, longPeriod, signalPeriod i
 	return CalculateMACD(prices, shortPeriod, longPeriod, signalPeriod)
 }
 
+// MACD_ 获取最新的MACD值
+// 参数：
+//   - shortPeriod: 短期EMA周期
+//   - longPeriod: 长期EMA周期
+//   - signalPeriod: 信号线周期
+//
+// 返回值：
+//   - float64: 最新的MACD值
+//   - float64: 最新的DIF值
+//   - float64: 最新的DEA值
+func (k *KlineDatas) MACD_(shortPeriod, longPeriod, signalPeriod int) (float64, float64, float64) {
+	macd, err := k.MACD("close", shortPeriod, longPeriod, signalPeriod)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return macd.Value()
+}
+
 // Value 获取最新的MACD值
 // 说明：
 //

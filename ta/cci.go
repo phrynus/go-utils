@@ -98,6 +98,20 @@ func (k *KlineDatas) CCI(period int) (*TaCCI, error) {
 	return CalculateCCI(*k, period)
 }
 
+// CCI_ 获取最新的CCI值
+// 参数：
+//   - period: 计算周期
+//
+// 返回值：
+//   - float64: 最新的CCI值
+func (k *KlineDatas) CCI_(period int) float64 {
+	cci, err := k.CCI(period)
+	if err != nil {
+		return 0
+	}
+	return cci.Value()
+}
+
 // Value 获取最新的CCI值
 // 说明：
 //
