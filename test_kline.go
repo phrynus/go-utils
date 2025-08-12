@@ -58,6 +58,16 @@ func testFuturesKline(client *futures.Client) {
 		return
 	}
 
+	ks, _ := klineDatas.Keep(5)
+	fmt.Println("================")
+	for _, k := range ks {
+		fmt.Println(k)
+	}
+	fmt.Println("================")
+	fmt.Println(klineDatas.GetLastN(1, "c"))
+	fmt.Println(klineDatas.GetLastN(0, "c"))
+	fmt.Println("================")
+
 	// 计算技术指标
 	calculateIndicators(klineDatas, symbol, interval)
 }
