@@ -85,6 +85,21 @@ func (k *KlineDatas) SMA(period int, source string) (*TaSMA, error) {
 	return CalculateSMA(prices, period)
 }
 
+// SMA_ 获取最新的SMA值
+// 参数：
+//   - period: SMA计算周期
+//   - source: 价格数据来源，可以是"close"、"open"、"high"、"low"等
+//
+// 返回值：
+//   - float64: 最新的SMA值
+func (k *KlineDatas) SMA_(period int, source string) float64 {
+	sma, err := k.SMA(period, source)
+	if err != nil {
+		return 0
+	}
+	return sma.Value()
+}
+
 // Value 获取最新的SMA值
 // 说明：
 //

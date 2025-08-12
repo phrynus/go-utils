@@ -208,6 +208,25 @@ func (k *KlineDatas) JingZheMA(period1, period2 int) (*TaJingZheMA, error) {
 	return CalculateJingZheMA(close, volume, period1, period2)
 }
 
+// JingZheMA_ 获取最新的惊蛰均线信号值
+// 参数：
+//   - period1: 主要计算周期（默认25）
+//   - period2: OBV的EMA计算周期（默认6）
+//
+// 返回值：
+//   - float64: 最新的条件1信号值
+//   - float64: 最新的条件2信号值
+//   - float64: 最新的条件3信号值
+//   - float64: 最新的条件4信号值
+//   - float64: 最新的条件5信号值
+func (k *KlineDatas) JingZheMA_(period1, period2 int) (float64, float64, float64, float64, float64) {
+	ma, err := k.JingZheMA(period1, period2)
+	if err != nil {
+		return 0, 0, 0, 0, 0
+	}
+	return ma.Value()
+}
+
 // Value1 获取条件1最新信号值
 // 说明：
 //
@@ -215,6 +234,10 @@ func (k *KlineDatas) JingZheMA(period1, period2 int) (*TaJingZheMA, error) {
 //
 // 返回值：
 //   - float64: 最新的条件1信号值
+//   - float64: 最新的条件2信号值
+//   - float64: 最新的条件3信号值
+//   - float64: 最新的条件4信号值
+//   - float64: 最新的条件5信号值
 func (t *TaJingZheMA) Value() (float64, float64, float64, float64, float64) {
 	lastIndex := len(t.Cond1Values) - 1
 	return t.Cond1Values[lastIndex], t.Cond2Values[lastIndex], t.Cond3Values[lastIndex], t.Cond4Values[lastIndex], t.Cond5Values[lastIndex]

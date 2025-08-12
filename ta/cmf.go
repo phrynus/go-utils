@@ -121,6 +121,21 @@ func (k *KlineDatas) CMF(period int, source string) (*TaCMF, error) {
 	return CalculateCMF(high, low, close, volume, period)
 }
 
+// CMF_ 获取最新的CMF值
+// 参数：
+//   - period: 计算周期
+//   - source: 价格类型（此参数在CMF计算中实际未使用，保留是为了接口一致性）
+//
+// 返回值：
+//   - float64: 最新的CMF值
+func (k *KlineDatas) CMF_(period int, source string) float64 {
+	cmf, err := k.CMF(period, source)
+	if err != nil {
+		return 0
+	}
+	return cmf.Value()
+}
+
 // Value 获取最新的CMF值
 // 说明：
 //

@@ -193,6 +193,23 @@ func (k *KlineDatas) DPO(source string, shortPeriod, longPeriod, xPeriod, smooth
 	return CalculateDPO(prices, shortPeriod, longPeriod, xPeriod, smoothPeriod)
 }
 
+// DPO_ 获取最新的DPO值
+// 参数：
+//   - shortPeriod: 短周期
+//   - longPeriod: 长周期
+//   - xPeriod: 差值长度周期
+//   - smoothPeriod: 平滑周期
+//
+// 返回值：
+//   - float64: 最新的DPO值
+func (k *KlineDatas) DPO_(shortPeriod, longPeriod, xPeriod, smoothPeriod int) (float64, float64, float64, float64, float64, float64) {
+	dpo, err := k.DPO("close", shortPeriod, longPeriod, xPeriod, smoothPeriod)
+	if err != nil {
+		return 0, 0, 0, 0, 0, 0
+	}
+	return dpo.Value()
+}
+
 // Value 获取最新的DPO值
 // 说明：
 //

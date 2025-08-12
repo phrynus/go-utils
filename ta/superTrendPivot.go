@@ -18,9 +18,10 @@ import (
 //	- 趋势跟踪能力更强
 //	- 适合中长期趋势交易
 type TaSuperTrendPivot struct {
-	Upper       []float64 `json:"upper"`        // 上轨线的时间序列
-	Lower       []float64 `json:"lower"`        // 下轨线的时间序列
-	Trend       []int     `json:"trend"`        // 趋势方向：1表示上涨，-1表示下跌，0表示初始状态
+	Values      []float64 `json:"values"`       // 指标值序列，上涨趋势时为下轨，下跌趋势时为上轨
+	Trend       []int     `json:"direction"`    // 趋势方向：1表示上涨，-1表示下跌，0表示初始状态
+	Upper       []float64 `json:"upper_band"`   // 上轨线的时间序列
+	Lower       []float64 `json:"lower_band"`   // 下轨线的时间序列
 	PivotPeriod int       `json:"pivot_period"` // 寻找轴点的周期范围
 	Factor      float64   `json:"factor"`       // ATR乘数，用于调整轨道宽度
 	AtrPeriod   int       `json:"atr_period"`   // ATR计算周期
@@ -111,6 +112,7 @@ func CalculateSuperTrendPivot(klineData KlineDatas, pivotPeriod int, factor floa
 
 	trendUp := make([]float64, dataLen)
 	trendDown := make([]float64, dataLen)
+	values := make([]float64, dataLen)
 	trend := make([]int, dataLen)
 
 	atr, err := klineData.ATR(atrPeriod)
@@ -174,18 +176,27 @@ func CalculateSuperTrendPivot(klineData KlineDatas, pivotPeriod int, factor floa
 			} else {
 				trend[i] = trend[i-1]
 			}
+			if trend[i] == 1 {
+				values[i] = trendUp[i]
+			} else if trend[i] == -1 {
+				values[i] = trendDown[i]
+			} else {
+				values[i] = (trendUp[i] + trendDown[i]) / 2
+			}
 		} else {
 
 			trendUp[i] = lowerBand
 			trendDown[i] = upperBand
 			trend[i] = 0
+			values[i] = (trendUp[i] + trendDown[i]) / 2
 		}
 	}
 
 	return &TaSuperTrendPivot{
+		Values:      values,
+		Trend:       trend,
 		Upper:       trendDown,
 		Lower:       trendUp,
-		Trend:       trend,
 		PivotPeriod: pivotPeriod,
 		Factor:      factor,
 		AtrPeriod:   atrPeriod,
@@ -207,6 +218,24 @@ func CalculateSuperTrendPivot(klineData KlineDatas, pivotPeriod int, factor floa
 //   - error: 计算过程中的错误
 func (k *KlineDatas) SuperTrendPivot(pivotPeriod int, factor float64, atrPeriod int) (*TaSuperTrendPivot, error) {
 	return CalculateSuperTrendPivot(*k, pivotPeriod, factor, atrPeriod)
+}
+
+// SuperTrendPivot_ 获取最新的SuperTrendPivot指标值
+// 参数：
+//   - pivotPeriod: 寻找轴点的周期范围
+//   - factor: ATR乘数
+//   - atrPeriod: ATR计算周期
+//
+// 返回值：
+//   - float64: 最新的上轨线值
+//   - float64: 最新的下轨线值
+//   - int: 当前趋势方向，true表示上涨趋势，false表示下跌趋势
+func (k *KlineDatas) SuperTrendPivot_(pivotPeriod int, factor float64, atrPeriod int) (float64, float64, int) {
+	superTrendPivot, err := k.SuperTrendPivot(pivotPeriod, factor, atrPeriod)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return superTrendPivot.Value()
 }
 
 // Value 获取最新的SuperTrendPivot指标值

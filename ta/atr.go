@@ -100,6 +100,20 @@ func (k *KlineDatas) ATR(period int) (*TaATR, error) {
 	return CalculateATR(*k, period)
 }
 
+// ATR_ 获取最新的ATR值
+// 参数：
+//   - period: 计算周期
+//
+// 返回值：
+//   - float64: 最新的ATR值
+func (k *KlineDatas) ATR_(period int) float64 {
+	atr, err := k.ATR(period)
+	if err != nil {
+		return 0
+	}
+	return atr.Value()
+}
+
 // Value 获取最新的ATR值
 // 说明：
 //
@@ -114,6 +128,12 @@ func (k *KlineDatas) ATR(period int) (*TaATR, error) {
 func (t *TaATR) Value() float64 {
 	return t.Values[len(t.Values)-1]
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 // Percent 计算ATR相对于当前价格的百分比
 // 说明：

@@ -139,6 +139,25 @@ func (k *KlineDatas) StochRSI(rsiPeriod, stochPeriod, kPeriod, dPeriod int, sour
 	return CalculateStochRSI(prices, rsiPeriod, stochPeriod, kPeriod, dPeriod)
 }
 
+// StochRSI_ 获取最新的StochRSI的K值和D值
+// 参数：
+//   - rsiPeriod: RSI计算周期
+//   - stochPeriod: 随机值计算周期
+//   - kPeriod: K值平滑周期
+//   - dPeriod: D值平滑周期
+//   - source: 价格数据来源，可以是"close"、"open"、"high"、"low"等
+//
+// 返回值：
+//   - float64: 最新的K值
+//   - float64: 最新的D值
+func (k *KlineDatas) StochRSI_(rsiPeriod, stochPeriod, kPeriod, dPeriod int, source string) (float64, float64) {
+	stochRsi, err := k.StochRSI(rsiPeriod, stochPeriod, kPeriod, dPeriod, source)
+	if err != nil {
+		return 0, 0
+	}
+	return stochRsi.Value()
+}
+
 // Value 获取最新的StochRSI的K值和D值
 // 说明：
 //

@@ -90,7 +90,7 @@ func calculateIndicators(klineDatas ta.KlineDatas, symbol, interval string) {
 	fmt.Printf("ema2: %v\n", ema2.Value())
 	fmt.Printf("ema3: %v\n", ema3.Value())
 
-	obv, err := klineDatas.OBV("close")
+	obv, err := klineDatas.OBV()
 	if err != nil {
 		fmt.Printf("计算OBV失败: %v", err)
 		return

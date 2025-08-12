@@ -133,6 +133,24 @@ func (k *KlineDatas) KDJ(rsvPeriod, kPeriod, dPeriod int) (*TaKDJ, error) {
 	return CalculateKDJ(high, low, close, rsvPeriod, kPeriod, dPeriod)
 }
 
+// KDJ_ 获取最新的KDJ值
+// 参数：
+//   - rsvPeriod: RSV计算周期
+//   - kPeriod: K值计算周期
+//   - dPeriod: D值计算周期
+//
+// 返回值：
+//   - k: 最新的K值
+//   - d: 最新的D值
+//   - j: 最新的J值
+func (k *KlineDatas) KDJ_(rsvPeriod, kPeriod, dPeriod int) (float64, float64, float64) {
+	kdj, err := k.KDJ(rsvPeriod, kPeriod, dPeriod)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return kdj.Value()
+}
+
 // Value 获取最新的KDJ值
 // 说明：
 //

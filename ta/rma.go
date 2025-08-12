@@ -91,6 +91,21 @@ func (k *KlineDatas) RMA(period int, source string) (*TaRMA, error) {
 	return CalculateRMA(prices, period)
 }
 
+// RMA_ 获取最新的RMA值
+// 参数：
+//   - period: 计算周期
+//   - source: 价格类型，支持"open"、"high"、"low"、"close"等
+//
+// 返回值：
+//   - float64: 最新的RMA值
+func (k *KlineDatas) RMA_(period int, source string) float64 {
+	rma, err := k.RMA(period, source)
+	if err != nil {
+		return 0
+	}
+	return rma.Value()
+}
+
 // Value 获取最新的RMA值
 // 说明：
 //
