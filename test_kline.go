@@ -52,7 +52,7 @@ func testFuturesKline(client *futures.Client) {
 	fmt.Printf("成功获取 %s %s 周期K线 %d 根\n", symbol, interval, len(klines))
 
 	// 转换为ta库的KlineDatas格式
-	klineDatas, err := ta.NewKlineDatas(klines, true)
+	klineDatas, err := ta.NewKlineDatas(klines, false)
 	if err != nil {
 		fmt.Printf("转换K线数据失败: %v", err)
 		return

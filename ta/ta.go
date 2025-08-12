@@ -518,6 +518,43 @@ func (k *KlineDatas) GetLast(source string) float64 {
 	}
 }
 
+// GetLastN 获取最后指定K线的指定数据
+//
+// 说明：
+//
+//	获取最后指定K线的特定价格数据
+//
+// 参数：
+//   - n: 要获取的K位置，支持正负整数
+//   - source: 数据类型，支持"open"、"high"、"low"、"close"、"volume"
+//
+// 返回值：
+//   - float64: 请求的价格数据，如果数据不存在返回-1
+func (k *KlineDatas) GetLastN(n int, source string) float64 {
+	total := len(*k)
+	if n < 0 {
+		n = total + n
+	}
+	if n < 0 || n >= total {
+		return -1
+	}
+	lastKline := (*k)[n]
+	switch source {
+	case "open":
+		return lastKline.Open
+	case "high":
+		return lastKline.High
+	case "low":
+		return lastKline.Low
+	case "close":
+		return lastKline.Close
+	case "volume":
+		return lastKline.Volume
+	default:
+		return -1
+	}
+}
+
 // preallocateSlices 预分配多个float64切片
 // 说明：
 //
