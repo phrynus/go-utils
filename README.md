@@ -6,25 +6,6 @@
 
 Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人功能。
 
-## 功能模块
-
-### 技术分析指标 (TA)
-- 移动平均线：SMA、EMA、RMA、惊蛰均线
-- 趋势指标：MACD、ADX、SuperTrend、DPO
-- 振荡器：RSI、KDJ、CCI、Stochastic RSI、Williams %R
-- 波动性指标：ATR、布林带、VR
-- 成交量指标：OBV、CMF
-- 兼容 go-binance 库的 K 线数据结构
-
-### 日志记录 (Logger)
-- 支持多种日志级别：INFO、DEBUG、WARN、ERROR
-- 彩色输出支持
-
-### 钉钉机器人 (DingTalk)
-- 文本消息、Markdown 消息
-- @功能（指定用户或全员）
-- 链接消息、卡片消息
-- 安全签名验证
 
 ## 安装
 
@@ -111,31 +92,6 @@ func main() {
     
     err = dt.SendMarkdown(title, text, at)
 }
-```
-
-## API 文档
-
-### 主要技术指标
-
-| 指标 | 方法 | 说明 |
-|------|------|------|
-| SMA | `SMA(period int, field string)` | 简单移动平均线 |
-| EMA | `EMA(period int, field string)` | 指数移动平均线 |
-| MACD | `MACD(field string, fast, slow, signal int)` | MACD指标 |
-| RSI | `RSI(period int, field string)` | 相对强弱指数 |
-| KDJ | `KDJ(kPeriod, dPeriod, jPeriod int)` | 随机指标 |
-| ATR | `ATR(period int)` | 平均真实范围 |
-| BOLL | `BOLL(period int, field string, multiplier float64)` | 布林带 |
-
-### 日志级别
-
-```go
-const (
-    INFO  = "INFO"   // 信息级别
-    DEBUG = "DEBUG"  // 调试级别  
-    WARN  = "WARN"   // 警告级别
-    ERROR = "ERROR"  // 错误级别
-)
 ```
 
 ## 版本发布
