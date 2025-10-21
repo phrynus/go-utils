@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/phrynus/go-utils"
+	"github.com/phrynus/go-utils/dingtalk"
 )
 
 // 注意：以下示例中的accessToken和secret需要替换为真实的值
@@ -13,7 +13,7 @@ const (
 	secret      = "SECd07ddca536b5385f14b22b819e9519ac144bd79263c96abcc5a64700762afb0d"
 )
 
-var dt = utils.NewDingtalk(accessToken).WithSecret(secret)
+var dt = dingtalk.NewDingtalk(accessToken).WithSecret(secret)
 
 func TestDingtalk() {
 	ExampleSendText()
@@ -38,7 +38,7 @@ func ExampleSendText() {
 func ExampleSendTextWithAt() {
 	// 发送带@功能的文本消息
 
-	at := &utils.AtMeta{
+	at := &dingtalk.AtMeta{
 		AtMobiles: []string{"18156274316"}, // @指定手机号
 		IsAtAll:   false,                   // 不@所有人
 	}
@@ -69,7 +69,7 @@ func ExampleSendMarkdown() {
 
 > 如有问题，请及时反馈！`
 
-	at := &utils.AtMeta{
+	at := &dingtalk.AtMeta{
 		IsAtAll: false, // @所有人
 	}
 
@@ -84,7 +84,7 @@ func ExampleSendMarkdown() {
 func ExampleSendLink() {
 	// 发送链接消息
 
-	link := &utils.LinkMeta{
+	link := &dingtalk.LinkMeta{
 		Title:      "Go语言官方网站",
 		Text:       "Go是Google开发的一种静态强类型、编译型语言。Go语言语法与C相近，但功能上有内存安全、垃圾回收、结构化类型、CSP并发等。",
 		MessageUrl: "https://golang.org",
@@ -102,7 +102,7 @@ func ExampleSendLink() {
 func ExampleSendActionCard() {
 	// 发送独立跳转ActionCard消息
 
-	actionCard := &utils.ActionCardMeta{
+	actionCard := &dingtalk.ActionCardMeta{
 		Title: "系统监控告警",
 		Text: `## 系统监控告警
 		
@@ -111,7 +111,7 @@ func ExampleSendActionCard() {
 **告警内容**: CPU使用率超过90%
 
 请相关人员及时处理！`,
-		Btns: []utils.ActionCardBtnMeta{
+		Btns: []dingtalk.ActionCardBtnMeta{
 			{
 				Title:     "查看详情",
 				ActionURL: "https://monitor.example.com/alert/123",
@@ -135,8 +135,8 @@ func ExampleSendActionCard() {
 func ExampleSendFeedCard() {
 	// 发送FeedCard消息
 
-	feedCard := &utils.FeedCardMeta{
-		Links: []utils.FeedCardLinkMeta{
+	feedCard := &dingtalk.FeedCardMeta{
+		Links: []dingtalk.FeedCardLinkMeta{
 			{
 				Title:      "Go 1.21 发布",
 				MessageURL: "https://golang.org/doc/go1.21",

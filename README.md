@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-AGPL--3.0-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v1.2.1-orange.svg)](https://github.com/phrynus/go-utils/releases)
 
-Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人功能。
+Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人、飞书机器人功能。
 
 
 ## 安装
@@ -61,14 +61,31 @@ package main
 import "github.com/phrynus/go-utils"
 
 func main() {
-    config := &utils.LogConfig{
-        Level: utils.INFO,
-        Color: true,
+    // 创建日志记录器
+    log, err = utils.NewLogger(utils.LogConfig{
+        Filename: "main.log", // log filename
+        LogDir:   "logs",     // log directory
+        MaxSize:  50 * 1024,  // KB
+        StdoutLevels: map[int]bool{
+        utils.INFO:  true,
+        utils.DEBUG: false,
+        utils.WARN:  true,
+        utils.ERROR: true,
+        },
+        ColorOutput:  true,
+        ShowFileLine: true,
+    })
+    if err != nil {
+        panic(err)
     }
-    logger := utils.NewLogger(config)
     
-    logger.Info("应用程序启动")
-    logger.Error("发生错误")
+    // 使用 defer 确保程序退出时关闭日志
+    defer func() {
+        if err := log.Close(); err != nil {
+            // 处理关闭错误
+            fmt.Printf("关闭日志记录器失败: %v\n", err)
+        }
+    }()
 }
 ```
 
@@ -94,10 +111,53 @@ func main() {
 }
 ```
 
+### 飞书机器人
+
+```go
+package main
+
+import "github.com/phrynus/go-utils"
+
+func main() {
+    // 创建飞书客户端（使用webhook URL和密钥）
+    fs := utils.NewFeiShu("https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id").
+        WithSecret("your_secret")
+    
+    // 发送文本消息
+    err := fs.SendText("Hello, FeiShu! 这是一条测试消息。")
+    
+    // 发送富文本消息
+    post := &utils.FsPost{
+        ZhCn: &utils.FsPostDetail{
+            Title: "系统监控告警",
+            Content: [][]utils.FsPostElem{
+                {
+                    {Tag: "text", Text: "告警时间: 2024-01-01 14:30:00"},
+                },
+                {
+                    {Tag: "text", Text: "告警级别: "},
+                    {Tag: "text", Text: "严重"},
+                },
+                {
+                    {Tag: "text", Text: "查看详情: "},
+                    {Tag: "a", Text: "点击这里", Href: "https://example.com"},
+                },
+                {
+                    {Tag: "at", UserId: "all"}, // @所有人
+                    {Tag: "text", Text: " 请及时处理！"},
+                },
+            },
+        },
+    }
+    
+    err = fs.SendPost(post)
+}
+```
+
 ## 版本发布
 
 ```bash
-git tag v1.2.2
+git tag v1.3.0
 git push origin --tags
 ```
 

@@ -1,4 +1,4 @@
-package dingtalk
+package feishu
 
 import (
 	"bytes"

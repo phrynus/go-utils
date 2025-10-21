@@ -8,7 +8,7 @@ import (
 
 	"github.com/adshao/go-binance/v2/futures"
 
-	"github.com/phrynus/go-utils"
+	"github.com/phrynus/go-utils/ta"
 )
 
 func TestTa() {
@@ -52,7 +52,7 @@ func testFuturesKline(client *futures.Client) {
 	fmt.Printf("成功获取 %s %s 周期K线 %d 根\n", symbol, interval, len(klines))
 
 	// 转换为ta库的KlineDatas格式
-	klineDatas, err := utils.NewKlineDatas(klines, false)
+	klineDatas, err := ta.NewKlineDatas(klines, false)
 	if err != nil {
 		fmt.Printf("转换K线数据失败: %v", err)
 		return
@@ -73,7 +73,7 @@ func testFuturesKline(client *futures.Client) {
 }
 
 // calculateIndicators 计算各种技术指标并打印结果
-func calculateIndicators(klineDatas utils.KlineDatas, symbol, interval string) {
+func calculateIndicators(klineDatas ta.KlineDatas, symbol, interval string) {
 	// 获取最近的K线时间
 	lastTime := time.Unix(0, klineDatas[len(klineDatas)-1].StartTime*int64(time.Millisecond))
 	fmt.Printf("最后一根K线开始时间: %s\n\n", lastTime.Format("2006-01-02 15:04:05"))
