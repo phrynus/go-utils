@@ -157,7 +157,7 @@ func main() {
 ## 版本发布
 
 ```bash
-git tag v1.3.1
+git tag v1.3.2
 git push origin --tags
 ```
 
