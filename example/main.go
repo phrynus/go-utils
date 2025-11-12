@@ -4,5 +4,6 @@ func main() {
 	// TestFeiShu()
 	// TestTa()
 	// TestFeiShu()
-	TestSystem()
+	// TestSystem()
+	TestCex()
 }
