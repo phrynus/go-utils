@@ -252,26 +252,22 @@ func (t *TaJingZheMA) Value() (float64, float64, float64, float64, float64) {
 // 获取确认方向数量
 func (t *TaJingZheMA) DirectionNum() int {
 	lastIndex := len(t.Cond1Values) - 1
-	jingzhe1_num := 0
-	jingzhe2_num := 0
-	jingzhe3_num := 0
-	jingzhe4_num := 0
-	jingzhe5_num := 0
+	count := 0
 	if t.Cond1Values[lastIndex] != t.Cond1Values[lastIndex-1] {
-		jingzhe1_num = 1
+		count++
 	}
 	if t.Cond2Values[lastIndex] != t.Cond2Values[lastIndex-1] {
-		jingzhe2_num = 1
+		count++
 	}
 	if t.Cond3Values[lastIndex] != t.Cond3Values[lastIndex-1] {
-		jingzhe3_num = 1
+		count++
 	}
 	if t.Cond4Values[lastIndex] != t.Cond4Values[lastIndex-1] {
-		jingzhe4_num = 1
+		count++
 	}
 	if t.Cond5Values[lastIndex] != t.Cond5Values[lastIndex-1] {
-		jingzhe5_num = 1
+		count++
 	}
 
-	return jingzhe1_num + jingzhe2_num + jingzhe3_num + jingzhe4_num + jingzhe5_num
+	return count
 }
