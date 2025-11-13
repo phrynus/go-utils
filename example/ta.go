@@ -52,7 +52,7 @@ func testFuturesKline(client *futures.Client) {
 	fmt.Printf("成功获取 %s %s 周期K线 %d 根\n", symbol, interval, len(klines))
 
 	// 转换为ta库的KlineDatas格式
-	klineDatas, err := ta.NewKlineDatas(klines, false)
+	klineDatas, err := ta.NewKlineDatas(klines, true)
 	if err != nil {
 		fmt.Printf("转换K线数据失败: %v", err)
 		return
@@ -109,9 +109,12 @@ func calculateIndicators(klineDatas ta.KlineDatas, symbol, interval string) {
 
 	jingzhema, err := klineDatas.JingZheMA(25, 6)
 	if err != nil {
-		fmt.Printf("计算DPO失败: %v", err)
+		fmt.Printf("计算JingZheMA失败: %v", err)
 		return
 	}
 	cond1, cond2, cond3, cond4, cond5 := jingzhema.Value()
-	fmt.Printf("%v, %v, %v, %v, %v\n", cond1, cond2, cond3, cond4, cond5)
+	fmt.Printf("JingZheMA：%v, %v, %v, %v, %v\n", cond1, cond2, cond3, cond4, cond5)
+
+	directionNum := jingzhema.DirectionNum()
+	fmt.Printf("JingZheMA方向数：%v\n", directionNum)
 }
