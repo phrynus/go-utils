@@ -2,9 +2,9 @@ package main
 
 func main() {
 	// TestFeiShu()
-	// TestTa()
+	TestTa()
 	// TestFeiShu()
 	// TestSystem()
 	// TestCex()
-	TestUyzUser()
+	// TestUyzUser()
 }

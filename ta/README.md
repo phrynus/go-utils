@@ -85,6 +85,9 @@ err := kline.Add(wsKline)
 if err != nil {
     log.Fatal(err)
 }
+
+// 如果使用了自定义字段名称，添加时也需要传入
+err = kline.Add(wsKline, customFields)
 ```
 
 ### 提取价格序列
@@ -102,6 +105,37 @@ highPrices, _ := kline.ExtractSlice("high")
 lowPrices, _ := kline.ExtractSlice("low")
 volume, _ := kline.ExtractSlice("volume")
 ```
+
+### 使用自定义字段名称
+
+如果你的K线数据使用了非标准的字段名称，可以通过 `FieldNames` 结构体来扩展支持的字段名称：
+
+```go
+// 定义自定义字段名称
+customFields := &ta.FieldNames{
+    TimeFields:   []string{"timestamp", "ts"},        // 自定义时间字段
+    OpenFields:   []string{"open_price", "op"},       // 自定义开盘价字段
+    HighFields:   []string{"high_price", "hp"},       // 自定义最高价字段
+    LowFields:    []string{"low_price", "lp"},        // 自定义最低价字段
+    CloseFields:  []string{"close_price", "cp"},      // 自定义收盘价字段
+    VolumeFields: []string{"vol", "amount"},         // 自定义成交量字段
+}
+
+// 使用自定义字段名称创建K线数据
+kline, err := ta.NewKlineDatas(klines, true, customFields)
+if err != nil {
+    log.Fatal(err)
+}
+
+// 添加新K线时也可以使用自定义字段名称
+err = kline.Add(newKline, customFields)
+```
+
+**注意**：
+
+- 自定义字段名称会优先于默认字段名称进行匹配
+- 如果某个字段类型（如 `TimeFields`）为 `nil` 或空，则使用默认字段名称
+- 自定义字段名称和默认字段名称会合并使用，确保兼容性
 
 ## 支持的指标
 
@@ -374,11 +408,20 @@ func main() {
 
 - `KlineData`: K线数据结构
 - `KlineDatas`: K线数据切片类型
+- `FieldNames`: 自定义字段名称配置结构体
+  - `TimeFields []string`: 自定义时间字段名称
+  - `OpenFields []string`: 自定义开盘价字段名称
+  - `HighFields []string`: 自定义最高价字段名称
+  - `LowFields []string`: 自定义最低价字段名称
+  - `CloseFields []string`: 自定义收盘价字段名称
+  - `VolumeFields []string`: 自定义成交量字段名称
 
 ### 核心方法
 
-- `NewKlineDatas(klines interface{}, excludeLast bool) (KlineDatas, error)`: 创建K线数据集合
-- `Add(wsKline interface{}) error`: 添加新的K线数据
+- `NewKlineDatas(klines interface{}, excludeLast bool, customFields ...*FieldNames) (KlineDatas, error)`: 创建K线数据集合
+  - `customFields`: 可选的自定义字段名称，用于扩展支持的字段名称
+- `Add(wsKline interface{}, customFields ...*FieldNames) error`: 添加新的K线数据
+  - `customFields`: 可选的自定义字段名称，用于扩展支持的字段名称
 - `ExtractSlice(priceType string) ([]float64, error)`: 提取价格序列
 
 ### 指标方法
@@ -400,6 +443,12 @@ func main() {
 3. **价格类型**：提取价格序列时，`priceType` 参数支持：`"open"`, `"high"`, `"low"`, `"close"`, `"volume"`。
 
 4. **错误处理**：所有指标计算方法都可能返回错误，请务必检查错误。
+
+5. **自定义字段名称**：
+   - 自定义字段名称会优先于默认字段名称进行匹配
+   - 如果某个字段类型（如 `TimeFields`）为 `nil` 或空，则使用默认字段名称
+   - 自定义字段名称和默认字段名称会合并使用，确保兼容性
+   - 使用自定义字段名称时，`Add` 方法也需要传入相同的 `FieldNames` 配置
 
 ## 免责声明
 
