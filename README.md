@@ -12,7 +12,7 @@ Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人�
 - **[logger](./logger/)** - 日志记录器，支持日志轮转、压缩、彩色输出、多级别日志
 - **[dingtalk](./dingtalk/)** - 钉钉机器人客户端，支持发送文本、Markdown、链接、ActionCard、FeedCard等消息
 - **[feishu](./feishu/)** - 飞书机器人客户端，支持发送文本、富文本、图片、分享群名片、消息卡片等
-- **[uyz-u](./uyz-u/)** - 用户API客户端，支持加密通信、签名验证、登录、支付等功能
+- **[uyz-u](./uyz-u/)** - U验证 用户API客户端，支持加密通信、签名验证、登录、支付等功能
 
 ## 安装
 
@@ -176,7 +176,7 @@ func main() {
 
 更多示例请查看 [feishu/README.md](./feishu/README.md) 或 [example/feishu.go](./example/feishu.go)
 
-### 用户API客户端
+### U验证 用户API客户端
 
 ```go
 package main
@@ -226,7 +226,7 @@ func main() {
 - [ta.go](./example/ta.go) - 技术分析指标使用示例
 - [dingtalk.go](./example/dingtalk.go) - 钉钉机器人使用示例
 - [feishu.go](./example/feishu.go) - 飞书机器人使用示例
-- [uyz-u.go](./example/uyz-u.go) - 用户API客户端使用示例
+- [uyz-u.go](./example/uyz-u.go) - U验证 用户API客户端使用示例
 
 ## 许可证
 
