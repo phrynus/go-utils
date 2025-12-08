@@ -8,24 +8,8 @@ import (
 	"strconv"
 )
 
-// SmartUnmarshal 智能JSON解析,根据目标类型进行自动转换
-// 支持:
-// - 字符串数字 → 数字类型
-// - 数字 → 字符串类型
-// - 空字符串 → 0/""
-// - 任意类型之间的智能转换
-func SmartUnmarshal(data []byte, v interface{}) error {
-	// // 先尝试标准JSON解析
-	// if err := json.Unmarshal(data, v); err == nil {
-	// 	return nil
-	// }
-
-	// 如果失败,使用智能转换
-	return unmarshalWithTypeConversion(data, v)
-}
-
 // unmarshalWithTypeConversion 根据目标类型进行智能转换
-func unmarshalWithTypeConversion(data []byte, v interface{}) error {
+func SmartUnmarshal(data []byte, v interface{}) error {
 	// 解析JSON到interface{}
 	var rawData interface{}
 	decoder := json.NewDecoder(bytes.NewReader(data))

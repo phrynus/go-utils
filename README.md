@@ -2,10 +2,17 @@
 
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.24-blue.svg)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.2.1-orange.svg)](https://github.com/phrynus/go-utils/releases)
+[![Version](https://img.shields.io/badge/Version-v1.4.0-orange.svg)](https://github.com/phrynus/go-utils/releases)
 
-Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人、飞书机器人功能。
+Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人、飞书机器人、用户API客户端等功能。
 
+## 功能模块
+
+- **[ta](./ta/)** - 技术分析指标库，提供多种技术指标计算（MACD、RSI、KDJ、布林带等）
+- **[logger](./logger/)** - 日志记录器，支持日志轮转、压缩、彩色输出、多级别日志
+- **[dingtalk](./dingtalk/)** - 钉钉机器人客户端，支持发送文本、Markdown、链接、ActionCard、FeedCard等消息
+- **[feishu](./feishu/)** - 飞书机器人客户端，支持发送文本、富文本、图片、分享群名片、消息卡片等
+- **[uyz-u](./uyz-u/)** - 用户API客户端，支持加密通信、签名验证、登录、支付等功能
 
 ## 安装
 
@@ -13,7 +20,7 @@ Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人�
 go get github.com/phrynus/go-utils
 ```
 
-## 使用示例
+## 快速开始
 
 ### 技术分析指标
 
@@ -25,12 +32,12 @@ import (
     "log"
     
     "github.com/adshao/go-binance/v2/futures"
-    "github.com/phrynus/go-utils"
+    "github.com/phrynus/go-utils/ta"
 )
 
 func main() {
     // 获取币安K线数据
-    client := binance.NewFuturesClient("", "")
+    client := futures.NewClient("", "")
     binanceKline, err := client.NewKlinesService().
         Limit(1000).
         Symbol("BTCUSDT").
@@ -41,7 +48,7 @@ func main() {
     }
 
     // 转换为工具库格式
-    kline, err := utils.NewKlineDatas(binanceKline, true)
+    kline, err := ta.NewKlineDatas(binanceKline, true)
     if err != nil {
         log.Fatal(err)
     }
@@ -53,24 +60,29 @@ func main() {
 }
 ```
 
+更多示例请查看 [ta/README.md](./ta/README.md)
+
 ### 日志记录
 
 ```go
 package main
 
-import "github.com/phrynus/go-utils"
+import (
+    "fmt"
+    "github.com/phrynus/go-utils/logger"
+)
 
 func main() {
     // 创建日志记录器
-    log, err = utils.NewLogger(utils.LogConfig{
+    log, err := logger.NewLogger(logger.LogConfig{
         Filename: "main.log", // log filename
         LogDir:   "logs",     // log directory
         MaxSize:  50 * 1024,  // KB
         StdoutLevels: map[int]bool{
-        utils.INFO:  true,
-        utils.DEBUG: false,
-        utils.WARN:  true,
-        utils.ERROR: true,
+            logger.INFO:  true,
+            logger.DEBUG: false,
+            logger.WARN:  true,
+            logger.ERROR: true,
         },
         ColorOutput:  true,
         ShowFileLine: true,
@@ -82,22 +94,28 @@ func main() {
     // 使用 defer 确保程序退出时关闭日志
     defer func() {
         if err := log.Close(); err != nil {
-            // 处理关闭错误
             fmt.Printf("关闭日志记录器失败: %v\n", err)
         }
     }()
+    
+    // 使用日志
+    log.Info("这是一条信息日志")
+    log.Debugf("调试信息: %s", "value")
+    log.Warn("警告信息")
 }
 ```
+
+更多示例请查看 [logger/README.md](./logger/README.md)
 
 ### 钉钉机器人
 
 ```go
 package main
 
-import "github.com/phrynus/go-utils"
+import "github.com/phrynus/go-utils/dingtalk"
 
 func main() {
-    dt := utils.NewDingtalk("your_access_token").WithSecret("your_secret")
+    dt := dingtalk.NewDingtalk("your_access_token").WithSecret("your_secret")
     
     // 发送文本消息
     err := dt.SendText("Hello, DingTalk!", nil)
@@ -105,32 +123,34 @@ func main() {
     // 发送Markdown消息
     title := "系统通知"
     text := "## 系统维护通知\n请提前做好准备！"
-    at := &utils.AtMeta{IsAtAll: true}
+    at := &dingtalk.AtMeta{IsAtAll: true}
     
     err = dt.SendMarkdown(title, text, at)
 }
 ```
+
+更多示例请查看 [dingtalk/README.md](./dingtalk/README.md) 或 [example/dingtalk.go](./example/dingtalk.go)
 
 ### 飞书机器人
 
 ```go
 package main
 
-import "github.com/phrynus/go-utils"
+import "github.com/phrynus/go-utils/feishu"
 
 func main() {
     // 创建飞书客户端（使用webhook URL和密钥）
-    fs := utils.NewFeiShu("https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id").
+    fs := feishu.NewFeiShu("https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id").
         WithSecret("your_secret")
     
     // 发送文本消息
     err := fs.SendText("Hello, FeiShu! 这是一条测试消息。")
     
     // 发送富文本消息
-    post := &utils.FsPost{
-        ZhCn: &utils.FsPostDetail{
+    post := &feishu.Post{
+        ZhCn: &feishu.PostDetail{
             Title: "系统监控告警",
-            Content: [][]utils.FsPostElem{
+            Content: [][]feishu.PostElem{
                 {
                     {Tag: "text", Text: "告警时间: 2024-01-01 14:30:00"},
                 },
@@ -153,6 +173,60 @@ func main() {
     err = fs.SendPost(post)
 }
 ```
+
+更多示例请查看 [feishu/README.md](./feishu/README.md) 或 [example/feishu.go](./example/feishu.go)
+
+### 用户API客户端
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+    user "github.com/phrynus/go-utils/uyz-u"
+)
+
+func main() {
+    client, err := user.New(user.ClientConfig{
+        BaseURL:          "https://example.com/api/user",
+        AppID:            1003,
+        AppKey:           "your_app_key",
+        Version:          "1.0.0",
+        VersionIndex:     "web",
+        ClientPrivateKey: rsaClientPrivateKey,
+        ServerPublicKey:  rsaServerPublicKey,
+        EncryptionMode:   user.EncryptionRSA,
+        DisableSignature: false,
+    })
+    if err != nil {
+        log.Fatalf("create client: %v", err)
+    }
+
+    // 登录
+    login, err := client.NewLogin().
+        Account("username").
+        Password("password").
+        UDID("device-id").
+        Do(context.Background())
+    if err != nil {
+        log.Fatalf("login failed: %v", err)
+    }
+    
+    fmt.Println(login)
+}
+```
+
+更多示例请查看 [uyz-u/README.md](./uyz-u/README.md) 或 [example/uyz-u.go](./example/uyz-u.go)
+
+## 示例代码
+
+完整的示例代码请查看 [example](./example/) 目录：
+
+- [ta.go](./example/ta.go) - 技术分析指标使用示例
+- [dingtalk.go](./example/dingtalk.go) - 钉钉机器人使用示例
+- [feishu.go](./example/feishu.go) - 飞书机器人使用示例
+- [uyz-u.go](./example/uyz-u.go) - 用户API客户端使用示例
 
 ## 版本发布
 
