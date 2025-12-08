@@ -228,13 +228,6 @@ func main() {
 - [feishu.go](./example/feishu.go) - 飞书机器人使用示例
 - [uyz-u.go](./example/uyz-u.go) - 用户API客户端使用示例
 
-## 版本发布
-
-```bash
-git tag v1.3.2
-git push origin --tags
-```
-
 ## 许可证
 
 本项目采用 GNU Affero General Public License v3.0 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
