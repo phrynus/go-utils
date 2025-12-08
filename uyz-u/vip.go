@@ -2,8 +2,6 @@ package user
 
 import (
 	"context"
-	"errors"
-	"strconv"
 )
 
 // VIP 构建并执行会员验证 API 请求
@@ -44,11 +42,6 @@ func (v *VIP) Do(ctx ...context.Context) (bool, error) {
 	}
 
 	res, err := v.client.SecurePost(callCtx, "vip", v.req, nil)
-	if err != nil {
-		return false, err
-	}
-	if res.Code != 0 {
-		return false, errors.New(strconv.Itoa(res.Code) + ":" + res.Msg)
-	}
-	return true, nil
+
+	return res.Code == 0, err
 }

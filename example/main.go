@@ -6,5 +6,5 @@ func main() {
 	// TestFeiShu()
 	// TestSystem()
 	// TestCex()
-	// TestUyzUser()
+	TestUyzUser()
 }
