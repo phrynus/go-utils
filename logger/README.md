@@ -13,6 +13,8 @@
 - ✅ 使用缓冲区提高写入性能
 - ✅ 支持并发安全的日志记录
 - ✅ 自动刷新缓冲区
+- ✅ 支持Logger克隆和父子关系管理
+- ✅ 支持主Logger关闭时级联关闭所有子Logger
 
 ## 安装
 
@@ -124,6 +126,47 @@ config := logger.LogConfig{
 log, err := logger.NewLogger(config)
 ```
 
+### Logger克隆和父子关系
+
+Logger支持克隆功能，可以创建具有不同标识符的子Logger，所有Logger共享同一个异步处理系统以提高效率。
+
+#### 克隆Logger
+
+```go
+// 创建主Logger
+log, _ := logger.NewLogger(config)
+
+// 克隆子Logger，具有不同的标识符
+childLog := log.Clone("CHILD")
+
+// 子Logger再克隆
+grandChildLog := childLog.Clone("GRANDCHILD")
+
+// 每个Logger都有独立的标识符
+log.Info("主Logger消息")           // [MAIN] 主Logger消息
+childLog.Info("子Logger消息")       // [CHILD] 子Logger消息
+grandChildLog.Info("孙Logger消息")   // [GRANDCHILD] 孙Logger消息
+```
+
+#### 关闭行为
+
+- **主Logger关闭**：级联关闭所有子Logger
+- **子Logger关闭**：只关闭自己，不影响其他Logger
+
+```go
+// 关闭子Logger，不影响其他Logger
+childLog.Close()  // 只关闭CHILD
+
+// 关闭主Logger，自动关闭所有相关Logger
+log.Close()  // 关闭MAIN、GRANDCHILD
+```
+
+#### 使用场景
+
+- 微服务架构中不同模块使用不同的日志标识符
+- 多租户应用中不同租户使用独立的日志标识符
+- 复杂的应用中按功能模块划分日志来源
+
 ### 日志轮转
 
 当日志文件大小超过 `MaxSize` 时，会自动触发日志轮转：
@@ -196,19 +239,37 @@ func main() {
     if err != nil {
         panic(err)
     }
-    
+
     defer log.Close()
-    
+
+    // 克隆子Logger用于不同模块
+    dbLog := log.Clone("DATABASE")
+    apiLog := log.Clone("API")
+
     // 模拟业务逻辑
     log.Info("应用程序启动")
-    
-    for i := 0; i < 10; i++ {
+    dbLog.Info("数据库连接初始化")
+    apiLog.Info("API服务器启动")
+
+    for i := 0; i < 5; i++ {
         log.Debugf("处理任务 %d", i)
+        dbLog.Debugf("查询用户数据 %d", i)
+        apiLog.Debugf("处理API请求 %d", i)
         time.Sleep(100 * time.Millisecond)
     }
-    
-    log.Warn("资源使用率较高")
-    log.Info("应用程序关闭")
+
+    dbLog.Warn("数据库连接池使用率较高")
+    apiLog.Warn("API响应时间增加")
+    log.Warn("系统负载较高")
+
+    // 子Logger可以独立关闭
+    dbLog.Close()  // 只关闭数据库Logger
+
+    apiLog.Info("API服务器继续运行")
+    log.Info("应用程序核心功能正常")
+
+    // 主Logger关闭时会自动关闭剩余的子Logger
+    // log.Close() 在defer中自动调用
 }
 ```
 
@@ -229,6 +290,7 @@ func main() {
 ### 方法
 
 - `NewLogger(config LogConfig) (*Logger, error)`: 创建新的日志记录器
+- `Clone(phrynus string) *Logger`: 克隆日志记录器，创建具有新标识符的子Logger
 - `Close() error`: 关闭日志记录器，刷新缓冲区并关闭文件
 - `Info(args ...interface{})`: 记录信息级别日志
 - `Debug(args ...interface{})`: 记录调试级别日志
@@ -245,11 +307,18 @@ func main() {
 
 2. **资源清理**：建议使用 `defer log.Close()` 确保程序退出时正确关闭日志记录器。
 
-3. **日志轮转**：确保 `LogDir` 目录有写入权限，否则轮转可能失败。
+3. **Logger克隆**：克隆的Logger共享异步处理系统以提高效率，但关闭行为有特殊规则。
 
-4. **并发安全**：日志记录器是并发安全的，可以在多个 goroutine 中同时使用。
+4. **关闭行为**：
+   - 主Logger关闭时会自动关闭所有子Logger
+   - 子Logger关闭时不会影响其他Logger
+   - 建议在应用关闭时只关闭主Logger
 
-5. **性能考虑**：日志写入使用缓冲区，可能会有短暂的延迟。如果需要立即写入，可以考虑在关键位置手动触发刷新。
+5. **日志轮转**：确保 `LogDir` 目录有写入权限，否则轮转可能失败。
 
-6. **文件大小**：`MaxSize` 的单位是 KB，例如 `50 * 1024` 表示 50MB。
+6. **并发安全**：日志记录器是并发安全的，可以在多个 goroutine 中同时使用。
+
+7. **性能考虑**：日志写入使用缓冲区，可能会有短暂的延迟。如果需要立即写入，可以考虑在关键位置手动触发刷新。
+
+8. **文件大小**：`MaxSize` 的单位是 KB，例如 `50 * 1024` 表示 50MB。
 

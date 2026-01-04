@@ -63,3 +63,8 @@ func (q *QQLoginQuery) Do(ctx ...context.Context) (QQLoginQueryData, error) {
 	}
 	return payload, nil
 }
+
+
+
+
+

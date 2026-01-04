@@ -9,7 +9,7 @@ Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人�
 ## 功能模块
 
 - **[ta](./ta/)** - 技术分析指标库，提供多种技术指标计算（MACD、RSI、KDJ、布林带等）
-- **[logger](./logger/)** - 日志记录器，支持日志轮转、压缩、彩色输出、多级别日志
+- **[logger](./logger/)** - 高性能日志记录器，支持日志轮转、压缩、彩色输出、多级别日志、Logger克隆和父子关系管理
 - **[dingtalk](./dingtalk/)** - 钉钉机器人客户端，支持发送文本、Markdown、链接、ActionCard、FeedCard等消息
 - **[feishu](./feishu/)** - 飞书机器人客户端，支持发送文本、富文本、图片、分享群名片、消息卡片等
 - **[uyz-u](./uyz-u/)** - U验证 用户API客户端，支持加密通信、签名验证、登录、支付等功能
@@ -90,22 +90,31 @@ func main() {
     if err != nil {
         panic(err)
     }
-    
+
     // 使用 defer 确保程序退出时关闭日志
     defer func() {
         if err := log.Close(); err != nil {
             fmt.Printf("关闭日志记录器失败: %v\n", err)
         }
     }()
-    
+
+    // 克隆子Logger用于不同模块
+    dbLog := log.Clone("DATABASE")
+    apiLog := log.Clone("API")
+
     // 使用日志
-    log.Info("这是一条信息日志")
-    log.Debugf("调试信息: %s", "value")
-    log.Warn("警告信息")
+    log.Info("应用程序启动")
+    dbLog.Info("数据库连接初始化")
+    apiLog.Info("API服务器启动")
+
+    // 子Logger可以独立管理
+    defer dbLog.Close()  // 只关闭数据库Logger
+
+    // 主Logger关闭时会自动关闭所有相关Logger
 }
 ```
 
-更多示例请查看 [logger/README.md](./logger/README.md)
+更多示例和详细功能说明请查看 [logger/README.md](./logger/README.md)
 
 ### 钉钉机器人
 
