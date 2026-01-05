@@ -1,3 +1,4 @@
+// 获取服务器时间
 package binance
 
 import "context"
@@ -6,23 +7,24 @@ type Time struct {
 	httpRequest *HttpRequest
 }
 
-// GetServerTime 创建服务器时间接口
+// NewGetServerTime 创建服务器时间查询
 func (b *Binance) NewGetServerTime() *Time {
 	return &Time{
 		httpRequest: &HttpRequest{
-			binance:     b,                            // 币安客户端实例
-			baseUrl:     b.UrlRest,                    // 基础URL
-			apiUrl:      "/fapi/v1/time",              // 请求URL
-			sign:        false,                        // 是否签名
-			isTimestamp: false,                        // 是否时间戳
-			params:      make(map[string]interface{}), // 请求参数
+			binance:     b,
+			baseUrl:     b.UrlRest,
+			apiUrl:      "/fapi/v1/time",
+			sign:        false,
+			isTimestamp: false,
+			params:      make(map[string]interface{}),
 		},
 	}
 }
 
+// Do 执行请求
 func (t *Time) Do(ctx context.Context) (int64, error) {
 	var res = new(struct {
-		ServerTime int64 `json:"serverTime"` // 服务器时间
+		ServerTime int64 `json:"serverTime"`
 	})
 
 	err := t.httpRequest.GetJSON(ctx, &res)

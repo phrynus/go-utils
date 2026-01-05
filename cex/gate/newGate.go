@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/proxy"
@@ -21,6 +22,7 @@ type Gate struct {
 	UrlWs       string        // WebSocket URL
 	UrlRest     string        // REST API URL
 	Exc         ExchangeInfo  // 合约交易对基础信息
+	ExcMu       sync.RWMutex  // Exc 并发保护
 	rateLimiter *rate.Limiter // 速率限制器
 }
 
@@ -58,7 +60,7 @@ func New(apiKey, secretKey, proxyURL string) *Gate {
 		secretKey:   secretKey,
 		proxyURL:    proxyURL,
 		HttpClient:  httpClient,
-		UrlWs:       "wss://ws.gate.io/v4",
+		UrlWs:       "wss://fx-ws.gateio.ws/v4/ws/usdt",
 		UrlRest:     "https://api.gateio.ws/api/v4",
 		Exc:         ExchangeInfo{},
 		rateLimiter: rate.NewLimiter(rate.Limit(20), 20), // 每秒20次请求

@@ -1,3 +1,4 @@
+// 获取服务器时间
 package gate
 
 import "context"

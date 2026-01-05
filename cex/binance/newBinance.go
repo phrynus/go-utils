@@ -7,23 +7,28 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/proxy"
 	"golang.org/x/time/rate"
 )
 
+// Binance 币安合约客户端
 type Binance struct {
-	apiKey      string        // 币安API密钥
-	secretKey   string        // 币安API密钥
-	proxyURL    string        // 代理URL
+	apiKey      string        // API Key
+	secretKey   string        // Secret Key
+	proxyURL    string        // 代理地址
 	HttpClient  *http.Client  // HTTP客户端
-	UrlWs       string        // WebSocket URL
-	UrlRest     string        // REST API URL
-	Exc         ExchangeInfo  // 合约交易对基础信息
-	rateLimiter *rate.Limiter // 速率限制器
+	UrlWs       string        // WS地址
+	UrlRest     string        // REST地址
+	Exc         ExchangeInfo  // 交易对信息
+	ExcMu       sync.RWMutex  // Exc 并发保护
+	Balance     *Balance      // 账户余额
+	rateLimiter *rate.Limiter // 请求限流器
 }
 
+// New 创建 Binance 客户端
 func New(apiKey, secretKey, proxyURL string) *Binance {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -58,10 +63,10 @@ func New(apiKey, secretKey, proxyURL string) *Binance {
 		secretKey:   secretKey,
 		proxyURL:    proxyURL,
 		HttpClient:  httpClient,
-		UrlWs:       "wss://ws-fapi.binance.com/ws-fapi/v1",
+		UrlWs:       "wss://fstream.binance.com/ws",
 		UrlRest:     "https://fapi.binance.com",
 		Exc:         ExchangeInfo{},
-		rateLimiter: rate.NewLimiter(rate.Limit(20), 20), // 每秒20次请求
+		rateLimiter: rate.NewLimiter(rate.Limit(20), 20),
 	}
 
 	binance.Exc = make(ExchangeInfo)
