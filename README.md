@@ -228,15 +228,6 @@ func main() {
 
 更多示例请查看 [uyz-u/README.md](./uyz-u/README.md) 或 [example/uyz-u.go](./example/uyz-u.go)
 
-## 示例代码
-
-完整的示例代码请查看 [example](./example/) 目录：
-
-- [ta.go](./example/ta.go) - 技术分析指标使用示例
-- [dingtalk.go](./example/dingtalk.go) - 钉钉机器人使用示例
-- [feishu.go](./example/feishu.go) - 飞书机器人使用示例
-- [uyz-u.go](./example/uyz-u.go) - U验证 用户API客户端使用示例
-
 ## 许可证
 
 本项目采用 GNU Affero General Public License v3.0 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
