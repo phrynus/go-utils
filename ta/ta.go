@@ -38,33 +38,123 @@ type FieldNames struct {
 	VolumeFields []string // 自定义成交量字段名称
 }
 
+// klineExtractor 定义K线数据提取器函数类型
+type klineExtractor func(reflect.Value) (*KlineData, error)
+
 // fieldCache 用于缓存结构体字段的反射信息
 // 说明：
 //
 //	为了提高性能，缓存了结构体中各个字段的索引位置和类型信息
 //	支持不同的字段命名方式和类型转换
 type fieldCache struct {
-	timeFieldIndex   []int // 时间字段的索引
-	openFieldIndex   []int // 开盘价字段的索引
-	highFieldIndex   []int // 最高价字段的索引
-	lowFieldIndex    []int // 最低价字段的索引
-	closeFieldIndex  []int // 收盘价字段的索引
-	volumeFieldIndex []int // 成交量字段的索引
-	isTimeInt64      bool  // 时间字段是否为int64类型
-	isStringPrice    bool  // 价格字段是否为字符串类型
+	timeFieldIndex   []int          // 时间字段的索引
+	openFieldIndex   []int          // 开盘价字段的索引
+	highFieldIndex   []int          // 最高价字段的索引
+	lowFieldIndex    []int          // 最低价字段的索引
+	closeFieldIndex  []int          // 收盘价字段的索引
+	volumeFieldIndex []int          // 成交量字段的索引
+	isTimeInt64      bool           // 时间字段是否为int64类型
+	isStringPrice    bool           // 价格字段是否为字符串类型
+	extractor        klineExtractor // 预生成的提取器函数，避免重复反射
+}
+
+// arrayFieldIndexes 数组格式字段索引结构体
+type arrayFieldIndexes struct {
+	timeIndex   int // 时间字段在数组中的索引
+	openIndex   int // 开盘价字段在数组中的索引
+	highIndex   int // 最高价字段在数组中的索引
+	lowIndex    int // 最低价字段在数组中的索引
+	closeIndex  int // 收盘价字段在数组中的索引
+	volumeIndex int // 成交量字段在数组中的索引
+}
+
+// arrayExtractorCache 用于缓存数组格式的提取器
+type arrayExtractorCache struct {
+	indexes   *arrayFieldIndexes // 字段索引
+	extractor klineExtractor     // 预生成的提取器函数
+}
+
+// extractArrayFieldIndexes 从FieldNames中提取数组字段索引
+func extractArrayFieldIndexes(customFields *FieldNames) *arrayFieldIndexes {
+	indexes := &arrayFieldIndexes{
+		timeIndex:   -1,
+		openIndex:   -1,
+		highIndex:   -1,
+		lowIndex:    -1,
+		closeIndex:  -1,
+		volumeIndex: -1,
+	}
+
+	// 合并字段列表（自定义优先，默认次之）
+	timeFieldList := mergeFieldListsWithDefault(customFields, func(f *FieldNames) []string { return f.TimeFields }, timeFields)
+	openFieldList := mergeFieldListsWithDefault(customFields, func(f *FieldNames) []string { return f.OpenFields }, openFields)
+	highFieldList := mergeFieldListsWithDefault(customFields, func(f *FieldNames) []string { return f.HighFields }, highFields)
+	lowFieldList := mergeFieldListsWithDefault(customFields, func(f *FieldNames) []string { return f.LowFields }, lowFields)
+	closeFieldList := mergeFieldListsWithDefault(customFields, func(f *FieldNames) []string { return f.CloseFields }, closeFields)
+	volumeFieldList := mergeFieldListsWithDefault(customFields, func(f *FieldNames) []string { return f.VolumeFields }, volumeFields)
+
+	// 从字段列表中提取数字索引
+	indexes.timeIndex = findNumericIndex(timeFieldList)
+	indexes.openIndex = findNumericIndex(openFieldList)
+	indexes.highIndex = findNumericIndex(highFieldList)
+	indexes.lowIndex = findNumericIndex(lowFieldList)
+	indexes.closeIndex = findNumericIndex(closeFieldList)
+	indexes.volumeIndex = findNumericIndex(volumeFieldList)
+
+	// 如果没有找到索引，使用默认顺序
+	if indexes.timeIndex == -1 {
+		indexes.timeIndex = 0
+	}
+	if indexes.openIndex == -1 {
+		indexes.openIndex = 1
+	}
+	if indexes.highIndex == -1 {
+		indexes.highIndex = 2
+	}
+	if indexes.lowIndex == -1 {
+		indexes.lowIndex = 3
+	}
+	if indexes.closeIndex == -1 {
+		indexes.closeIndex = 4
+	}
+	if indexes.volumeIndex == -1 {
+		indexes.volumeIndex = 5
+	}
+
+	return indexes
+}
+
+// mergeFieldListsWithDefault 合并自定义字段和默认字段
+func mergeFieldListsWithDefault(customFields *FieldNames, getFieldFunc func(*FieldNames) []string, defaults []string) []string {
+	if customFields == nil {
+		return defaults
+	}
+	custom := getFieldFunc(customFields)
+	return mergeFieldLists(custom, defaults)
+}
+
+// findNumericIndex 从字段列表中查找数字索引
+func findNumericIndex(fieldList []string) int {
+	for _, field := range fieldList {
+		if index, err := strconv.Atoi(field); err == nil && index >= 0 {
+			return index
+		}
+	}
+	return -1
 }
 
 // 全局变量定义
 var (
 	// 支持的各种字段名称映射
-	timeFields    = []string{"StartTime", "OpenTime", "Time", "t", "T", "Timestamp", "OpenAt", "EventTime"} // 支持的时间字段名
-	openFields    = []string{"Open", "OpenPrice", "O", "o"}                                                 // 支持的开盘价字段名
-	highFields    = []string{"High", "HighPrice", "H", "h"}                                                 // 支持的最高价字段名
-	lowFields     = []string{"Low", "LowPrice", "L", "l"}                                                   // 支持的最低价字段名
-	closeFields   = []string{"Close", "ClosePrice", "C", "c"}                                               // 支持的收盘价字段名
-	volumeFields  = []string{"Volume", "Vol", "V", "v", "Amount", "Quantity"}                               // 支持的成交量字段名
-	fieldCacheMap = make(map[reflect.Type]*fieldCache)                                                      // 字段缓存映射表
-	cacheMutex    sync.RWMutex                                                                              // 缓存读写锁
+	timeFields             = []string{"0", "StartTime", "OpenTime", "Time", "t", "T", "Timestamp", "OpenAt", "EventTime"} // 支持的时间字段名
+	openFields             = []string{"1", "Open", "OpenPrice", "O", "o"}                                                 // 支持的开盘价字段名
+	highFields             = []string{"2", "High", "HighPrice", "H", "h"}                                                 // 支持的最高价字段名
+	lowFields              = []string{"3", "Low", "LowPrice", "L", "l"}                                                   // 支持的最低价字段名
+	closeFields            = []string{"4", "Close", "ClosePrice", "C", "c"}                                               // 支持的收盘价字段名
+	volumeFields           = []string{"5", "Volume", "Vol", "V", "v", "Amount", "Quantity"}                               // 支持的成交量字段名
+	fieldCacheMap          = make(map[reflect.Type]*fieldCache)                                                           // 字段缓存映射表
+	arrayExtractorCacheMap = make(map[string]*arrayExtractorCache)                                                        // 数组提取器缓存映射表
+	cacheMutex             sync.RWMutex                                                                                   // 缓存读写锁
 )
 
 // findAndCacheFields 查找并缓存结构体的字段信息
@@ -103,13 +193,21 @@ func findAndCacheFields(t reflect.Type, customFields *FieldNames) (*fieldCache, 
 			return nil, err
 		}
 
+		// 生成并缓存提取器函数
+		cache.extractor = generateStructExtractor(cache)
+
 		fieldCacheMap[t] = cache
 		return cache, nil
 	}
 
 	// 有自定义字段名称，不使用缓存（因为自定义字段名称的情况较少）
 	cache := &fieldCache{}
-	return cache, findFields(t, cache, customFields)
+	if err := findFields(t, cache, customFields); err != nil {
+		return nil, err
+	}
+	// 生成提取器函数
+	cache.extractor = generateStructExtractor(cache)
+	return cache, nil
 }
 
 // findFields 查找字段的通用逻辑
@@ -210,6 +308,224 @@ func findFieldsWithList(t reflect.Type, cache *fieldCache, timeFields, openField
 	return nil
 }
 
+// generateStructExtractor 生成结构体格式的K线数据提取器
+func generateStructExtractor(cache *fieldCache) klineExtractor {
+	return func(item reflect.Value) (*KlineData, error) {
+		if item.Kind() == reflect.Ptr {
+			item = item.Elem()
+		}
+
+		var startTime int64
+		var open, high, low, close, volume float64
+
+		// 提取时间字段
+		timeField := item.FieldByIndex(cache.timeFieldIndex)
+		if cache.isTimeInt64 {
+			startTime = timeField.Int()
+		} else {
+			switch timeField.Kind() {
+			case reflect.String:
+				if t, parseErr := strconv.ParseInt(timeField.String(), 10, 64); parseErr == nil {
+					startTime = t
+				} else {
+					return nil, fmt.Errorf("时间字段转换失败")
+				}
+			case reflect.Float64:
+				startTime = int64(timeField.Float())
+			default:
+				return nil, fmt.Errorf("不支持的时间字段类型: %v", timeField.Kind())
+			}
+		}
+
+		// 提取价格字段的辅助函数
+		extractPrice := func(fieldIndex []int) (float64, error) {
+			if fieldIndex == nil {
+				return 0, fmt.Errorf("字段索引为空")
+			}
+			field := item.FieldByIndex(fieldIndex)
+			if cache.isStringPrice {
+				return strconv.ParseFloat(field.String(), 64)
+			}
+			switch field.Kind() {
+			case reflect.Float64:
+				return field.Float(), nil
+			case reflect.Int64:
+				return float64(field.Int()), nil
+			case reflect.String:
+				return strconv.ParseFloat(field.String(), 64)
+			default:
+				return 0, fmt.Errorf("不支持的价格字段类型: %v", field.Kind())
+			}
+		}
+
+		var err error
+		if open, err = extractPrice(cache.openFieldIndex); err != nil {
+			return nil, fmt.Errorf("开盘价字段转换失败: %v", err)
+		}
+		if high, err = extractPrice(cache.highFieldIndex); err != nil {
+			return nil, fmt.Errorf("最高价字段转换失败: %v", err)
+		}
+		if low, err = extractPrice(cache.lowFieldIndex); err != nil {
+			return nil, fmt.Errorf("最低价字段转换失败: %v", err)
+		}
+		if close, err = extractPrice(cache.closeFieldIndex); err != nil {
+			return nil, fmt.Errorf("收盘价字段转换失败: %v", err)
+		}
+		if volume, err = extractPrice(cache.volumeFieldIndex); err != nil {
+			return nil, fmt.Errorf("成交量字段转换失败: %v", err)
+		}
+
+		return &KlineData{
+			StartTime: startTime,
+			Open:      open,
+			High:      high,
+			Low:       low,
+			Close:     close,
+			Volume:    volume,
+		}, nil
+	}
+}
+
+// getArrayExtractor 获取或创建数组格式的K线数据提取器
+func getArrayExtractor(customFields *FieldNames) klineExtractor {
+	// 生成缓存键
+	key := "default"
+	if customFields != nil {
+		// 使用字段配置的哈希作为键（简化实现，实际可优化）
+		key = fmt.Sprintf("%v-%v-%v-%v-%v-%v",
+			customFields.TimeFields,
+			customFields.OpenFields,
+			customFields.HighFields,
+			customFields.LowFields,
+			customFields.CloseFields,
+			customFields.VolumeFields)
+	}
+
+	cacheMutex.RLock()
+	if cache, ok := arrayExtractorCacheMap[key]; ok {
+		cacheMutex.RUnlock()
+		return cache.extractor
+	}
+	cacheMutex.RUnlock()
+
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	// 双重检查
+	if cache, ok := arrayExtractorCacheMap[key]; ok {
+		return cache.extractor
+	}
+
+	// 创建新的缓存
+	indexes := extractArrayFieldIndexes(customFields)
+	cache := &arrayExtractorCache{
+		indexes:   indexes,
+		extractor: generateArrayExtractor(indexes),
+	}
+	arrayExtractorCacheMap[key] = cache
+	return cache.extractor
+}
+
+// generateArrayExtractor 生成数组格式的K线数据提取器
+func generateArrayExtractor(indexes *arrayFieldIndexes) klineExtractor {
+	return func(item reflect.Value) (*KlineData, error) {
+		if item.Kind() == reflect.Ptr {
+			item = item.Elem()
+		}
+
+		arrayLen := item.Len()
+		maxIndex := max(indexes.timeIndex, indexes.openIndex, indexes.highIndex, indexes.lowIndex, indexes.closeIndex, indexes.volumeIndex)
+		if arrayLen <= maxIndex {
+			return nil, fmt.Errorf("数组长度不足，需要至少%d个元素，当前只有%d个", maxIndex+1, arrayLen)
+		}
+
+		var startTime int64
+		var open, high, low, close, volume float64
+
+		// 提取时间字段
+		timeElem := item.Index(indexes.timeIndex)
+		// 处理 interface{} 类型
+		if timeElem.Kind() == reflect.Interface {
+			timeElem = timeElem.Elem()
+		}
+
+		switch timeElem.Kind() {
+		case reflect.String:
+			timeStr := timeElem.String()
+			if t, parseErr := strconv.ParseInt(timeStr, 10, 64); parseErr == nil {
+				startTime = t
+			} else if t, parseErr := strconv.ParseFloat(timeStr, 64); parseErr == nil {
+				startTime = int64(t)
+			} else {
+				return nil, fmt.Errorf("时间字段转换失败")
+			}
+		case reflect.Float64:
+			startTime = int64(timeElem.Float())
+		case reflect.Int, reflect.Int64:
+			startTime = timeElem.Int()
+		default:
+			return nil, fmt.Errorf("不支持的时间字段类型: %v", timeElem.Kind())
+		}
+
+		// 辅助函数：提取数值元素
+		extractNumeric := func(index int) (float64, error) {
+			if index < 0 || index >= arrayLen {
+				return 0, fmt.Errorf("索引超出范围: %d", index)
+			}
+			elem := item.Index(index)
+			// 处理 interface{} 类型
+			if elem.Kind() == reflect.Interface {
+				elem = elem.Elem()
+			}
+
+			switch elem.Kind() {
+			case reflect.Float64:
+				return elem.Float(), nil
+			case reflect.Float32:
+				return float64(elem.Float()), nil
+			case reflect.Int, reflect.Int64:
+				return float64(elem.Int()), nil
+			case reflect.Int32:
+				return float64(elem.Int()), nil
+			case reflect.Uint, reflect.Uint64:
+				return float64(elem.Uint()), nil
+			case reflect.Uint32:
+				return float64(elem.Uint()), nil
+			case reflect.String:
+				return strconv.ParseFloat(elem.String(), 64)
+			default:
+				return 0, fmt.Errorf("不支持的数值类型: %v", elem.Kind())
+			}
+		}
+
+		var err error
+		if open, err = extractNumeric(indexes.openIndex); err != nil {
+			return nil, fmt.Errorf("开盘价字段转换失败: %v", err)
+		}
+		if high, err = extractNumeric(indexes.highIndex); err != nil {
+			return nil, fmt.Errorf("最高价字段转换失败: %v", err)
+		}
+		if low, err = extractNumeric(indexes.lowIndex); err != nil {
+			return nil, fmt.Errorf("最低价字段转换失败: %v", err)
+		}
+		if close, err = extractNumeric(indexes.closeIndex); err != nil {
+			return nil, fmt.Errorf("收盘价字段转换失败: %v", err)
+		}
+		if volume, err = extractNumeric(indexes.volumeIndex); err != nil {
+			return nil, fmt.Errorf("成交量字段转换失败: %v", err)
+		}
+
+		return &KlineData{
+			StartTime: startTime,
+			Open:      open,
+			High:      high,
+			Low:       low,
+			Close:     close,
+			Volume:    volume,
+		}, nil
+	}
+}
+
 // extractKlineData 从反射值中提取K线数据
 // 说明：
 //
@@ -229,6 +545,7 @@ func extractKlineData(item reflect.Value, cache *fieldCache) (startTime int64, o
 		item = item.Elem()
 	}
 
+	// 结构体格式的处理
 	// 提取时间字段
 	timeField := item.FieldByIndex(cache.timeFieldIndex)
 	if cache.isTimeInt64 {
@@ -273,6 +590,71 @@ func extractKlineData(item reflect.Value, cache *fieldCache) (startTime int64, o
 	return
 }
 
+// extractKlineDataFromArray 从数组格式的K线数据中提取数据
+func extractKlineDataFromArray(item reflect.Value, indexes *arrayFieldIndexes) (startTime int64, open, high, low, close, volume string, err error) {
+	arrayLen := item.Len()
+	maxIndex := max(indexes.timeIndex, indexes.openIndex, indexes.highIndex, indexes.lowIndex, indexes.closeIndex, indexes.volumeIndex)
+	if arrayLen <= maxIndex {
+		return 0, "", "", "", "", "", fmt.Errorf("数组长度不足，需要至少%d个元素，当前只有%d个", maxIndex+1, arrayLen)
+	}
+
+	// 辅助函数：将数组元素转换为字符串
+	convertToString := func(index int) string {
+		if index < 0 || index >= arrayLen {
+			return ""
+		}
+		elem := item.Index(index)
+		switch elem.Kind() {
+		case reflect.String:
+			return elem.String()
+		case reflect.Float64:
+			return strconv.FormatFloat(elem.Float(), 'f', -1, 64)
+		case reflect.Float32:
+			return strconv.FormatFloat(elem.Float(), 'f', -1, 32)
+		case reflect.Int, reflect.Int64:
+			return strconv.FormatInt(elem.Int(), 10)
+		case reflect.Int32:
+			return strconv.FormatInt(elem.Int(), 10)
+		case reflect.Uint, reflect.Uint64:
+			return strconv.FormatUint(elem.Uint(), 10)
+		case reflect.Uint32:
+			return strconv.FormatUint(elem.Uint(), 10)
+		default:
+			return fmt.Sprintf("%v", elem.Interface())
+		}
+	}
+
+	// 根据配置的索引提取字段
+	timeStr := convertToString(indexes.timeIndex)
+	if t, parseErr := strconv.ParseInt(timeStr, 10, 64); parseErr == nil {
+		startTime = t
+	} else if t, parseErr := strconv.ParseFloat(timeStr, 64); parseErr == nil {
+		startTime = int64(t)
+	}
+
+	open = convertToString(indexes.openIndex)
+	high = convertToString(indexes.highIndex)
+	low = convertToString(indexes.lowIndex)
+	close = convertToString(indexes.closeIndex)
+	volume = convertToString(indexes.volumeIndex)
+
+	return
+}
+
+// max 返回多个整数中的最大值
+func max(values ...int) int {
+	if len(values) == 0 {
+		return 0
+	}
+	maxVal := values[0]
+	for _, v := range values[1:] {
+		if v > maxVal {
+			maxVal = v
+		}
+	}
+	return maxVal
+}
+
 // NewKlineDatas 创建新的K线数据集合
 // 说明：
 //
@@ -308,87 +690,100 @@ func NewKlineDatas(klines interface{}, l bool, customFields ...*FieldNames) (Kli
 		firstItem = firstItem.Elem()
 	}
 
+	// 检查是否为数组格式的K线数据
+	isArrayFormat := firstItem.Kind() == reflect.Slice || firstItem.Kind() == reflect.Array
+
+	var extractor klineExtractor
+	var err error
+
+	// 处理自定义字段配置
 	var customFieldsPtr *FieldNames
 	if len(customFields) > 0 && customFields[0] != nil {
 		customFieldsPtr = customFields[0]
 	}
 
-	cache, err := findAndCacheFields(firstItem.Type(), customFieldsPtr)
-	if err != nil {
-		return nil, err
+	if isArrayFormat {
+		// 数组格式：获取或创建提取器
+		extractor = getArrayExtractor(customFieldsPtr)
+	} else {
+		// 结构体格式：获取字段缓存和提取器
+		var cache *fieldCache
+		cache, err = findAndCacheFields(firstItem.Type(), customFieldsPtr)
+		if err != nil {
+			return nil, err
+		}
+		extractor = cache.extractor
 	}
 
-	// 提取单条K线转换函数，减少代码重复
+	// 提取单条K线转换函数，直接使用预生成的提取器
 	convertKlineItem := func(index int) error {
 		item := v.Index(index)
-		startTime, open, high, low, close, volume, extractErr := extractKlineData(item, cache)
+		klineData, extractErr := extractor(item)
 		if extractErr != nil {
 			return fmt.Errorf("处理第%d条数据时出错: %v", index+1, extractErr)
 		}
-
-		if open == "" || high == "" || low == "" || close == "" || volume == "" {
-			return fmt.Errorf("第%d条数据缺少必要字段", index+1)
-		}
-
-		o, err1 := strconv.ParseFloat(open, 64)
-		h, err2 := strconv.ParseFloat(high, 64)
-		l, err3 := strconv.ParseFloat(low, 64)
-		c, err4 := strconv.ParseFloat(close, 64)
-		vol, err5 := strconv.ParseFloat(volume, 64)
-
-		if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
-			return fmt.Errorf("第%d条数据转换失败", index+1)
-		}
-
-		klineDataList[index] = &KlineData{
-			StartTime: startTime,
-			Open:      o,
-			High:      h,
-			Low:       l,
-			Close:     c,
-			Volume:    vol,
-		}
+		klineDataList[index] = klineData
 		return nil
 	}
 
 	// 并发处理大量数据
-	var wg sync.WaitGroup
-	errChan := make(chan error, 1) // 只需要一个错误通道
+	// 限制 worker 数量，避免创建过多 goroutine
 	workers := runtime.NumCPU()
-	batchSize := length / workers
-	if batchSize == 0 {
-		batchSize = 1
+	if workers > length {
+		workers = length
 	}
 
-	for i := 0; i < workers; i++ {
-		start := i * batchSize
-		end := start + batchSize
-		if i == workers-1 {
-			end = length
+	if workers <= 1 {
+		// 数据量小，直接顺序处理
+		for i := 0; i < length; i++ {
+			if err := convertKlineItem(i); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		// 并发处理
+		var wg sync.WaitGroup
+		errChan := make(chan error, 1) // 只接收第一个错误
+
+		batchSize := length / workers
+		if batchSize == 0 {
+			batchSize = 1
 		}
 
-		wg.Add(1)
-		go func(start, end int) {
-			defer wg.Done()
-			for idx := start; idx < end; idx++ {
-				if err := convertKlineItem(idx); err != nil {
-					select {
-					case errChan <- err:
-					default:
-					}
-					return
-				}
+		for i := 0; i < workers; i++ {
+			start := i * batchSize
+			end := start + batchSize
+			if i == workers-1 {
+				end = length
 			}
-		}(start, end)
-	}
 
-	go func() {
-		wg.Wait()
-		close(errChan)
-	}()
+			wg.Add(1)
+			go func(start, end int) {
+				defer wg.Done()
+				for idx := start; idx < end; idx++ {
+					if err := convertKlineItem(idx); err != nil {
+						select {
+						case errChan <- err:
+							// 只发送第一个错误
+						default:
+							// 通道已满，说明已有其他错误被处理
+						}
+						return
+					}
+				}
+			}(start, end)
+		}
 
-	if err := <-errChan; err != nil {
-		return nil, err
+		// 等待所有 goroutine 完成
+		go func() {
+			wg.Wait()
+			close(errChan)
+		}()
+
+		// 检查是否有错误
+		if err := <-errChan; err != nil {
+			return nil, err
+		}
 	}
 
 	return klineDataList, nil
@@ -406,19 +801,26 @@ func NewKlineDatas(klines interface{}, l bool, customFields ...*FieldNames) (Kli
 //   - []float64: 提取的价格序列
 //   - error: 提取过程中的错误
 func (k *KlineDatas) ExtractSlice(priceType string) ([]float64, error) {
-	var prices []float64
-	for _, kline := range *k {
+	if len(*k) == 0 {
+		return nil, nil
+	}
+
+	// 预分配切片避免动态扩容
+	prices := make([]float64, len(*k))
+	for i, kline := range *k {
 		switch priceType {
 		case "open":
-			prices = append(prices, kline.Open)
+			prices[i] = kline.Open
 		case "high":
-			prices = append(prices, kline.High)
+			prices[i] = kline.High
 		case "low":
-			prices = append(prices, kline.Low)
+			prices[i] = kline.Low
 		case "close":
-			prices = append(prices, kline.Close)
+			prices[i] = kline.Close
 		case "volume":
-			prices = append(prices, kline.Volume)
+			prices[i] = kline.Volume
+		default:
+			return nil, fmt.Errorf("不支持的价格类型: %s", priceType)
 		}
 	}
 	return prices, nil
@@ -441,47 +843,42 @@ func (k *KlineDatas) Add(wsKline interface{}, customFields ...*FieldNames) error
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-	if v.Kind() != reflect.Struct {
-		return fmt.Errorf("数据必须是结构体类型")
-	}
 
+	// 检查是否为数组格式的K线数据
+	isArrayFormat := v.Kind() == reflect.Slice || v.Kind() == reflect.Array
+
+	var extractor klineExtractor
+	var err error
+
+	// 处理自定义字段配置
 	var customFieldsPtr *FieldNames
 	if len(customFields) > 0 && customFields[0] != nil {
 		customFieldsPtr = customFields[0]
 	}
 
-	cache, err := findAndCacheFields(v.Type(), customFieldsPtr)
+	if isArrayFormat {
+		// 数组格式：获取或创建提取器
+		extractor = getArrayExtractor(customFieldsPtr)
+	} else {
+		// 结构体格式：获取字段缓存和提取器
+		if v.Kind() != reflect.Struct {
+			return fmt.Errorf("数据必须是结构体或数组类型")
+		}
+		var cache *fieldCache
+		cache, err = findAndCacheFields(v.Type(), customFieldsPtr)
+		if err != nil {
+			return err
+		}
+		extractor = cache.extractor
+	}
+
+	// 使用提取器获取K线数据
+	klineData, err := extractor(v)
 	if err != nil {
 		return err
 	}
 
-	startTime, open, high, low, close, volume, err := extractKlineData(v, cache)
-	if err != nil {
-		return err
-	}
-
-	if open == "" || high == "" || low == "" || close == "" || volume == "" {
-		return fmt.Errorf("缺少必要字段")
-	}
-
-	o, err1 := strconv.ParseFloat(open, 64)
-	h, err2 := strconv.ParseFloat(high, 64)
-	l, err3 := strconv.ParseFloat(low, 64)
-	c, err4 := strconv.ParseFloat(close, 64)
-	v5, err5 := strconv.ParseFloat(volume, 64)
-
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
-		return fmt.Errorf("数据转换失败")
-	}
-
-	*k = append(*k, &KlineData{
-		StartTime: startTime,
-		Open:      o,
-		High:      h,
-		Low:       l,
-		Close:     c,
-		Volume:    v5,
-	})
+	*k = append(*k, klineData)
 	return nil
 }
 

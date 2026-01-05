@@ -52,7 +52,14 @@ func testFuturesKline(client *futures.Client) {
 	fmt.Printf("成功获取 %s %s 周期K线 %d 根\n", symbol, interval, len(klines))
 
 	// 转换为ta库的KlineDatas格式
-	klineDatas, err := ta.NewKlineDatas(klines, true)
+	klineDatas, err := ta.NewKlineDatas(klines, true, &ta.FieldNames{
+		CloseFields:  []string{"close_price", "cp"},
+		VolumeFields: []string{"volume", "vol"},
+		TimeFields:   []string{"timestamp", "ts"},
+		OpenFields:   []string{"open_price", "op"},
+		HighFields:   []string{"high_price", "hp"},
+		LowFields:    []string{"low_price", "lp"},
+	})
 	if err != nil {
 		fmt.Printf("转换K线数据失败: %v", err)
 		return
