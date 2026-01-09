@@ -89,12 +89,6 @@ type Logger struct {
 	stdoutLevels map[int]bool // 控制台输出级别配置
 	phrynus      string       // 日志标识符
 
-	// 文件信息缓存（减少runtime.Caller调用）
-	cachedFile    string
-	cachedLine    int
-	cacheValid    bool
-	lastCacheTime time.Time
-
 	// 父子关系管理（用于级联关闭）
 	parent   *Logger              // 父logger
 	children map[*Logger]struct{} // 子logger集合
@@ -370,24 +364,12 @@ func (l *Logger) flushLocked() error {
 	return nil
 }
 
-// getCachedFileInfo 获取缓存的文件信息
-func (l *Logger) getCachedFileInfo() string {
-	now := time.Now()
-	// 如果缓存仍然有效（同一秒内），直接返回
-	if l.cacheValid && now.Sub(l.lastCacheTime) < time.Second {
-		return fmt.Sprintf("%s:%d ", l.cachedFile, l.cachedLine)
-	}
-
-	// 更新缓存
+// getFileInfo 获取实时的文件信息
+func (l *Logger) getFileInfo() string {
 	_, file, line, ok := runtime.Caller(3) // 3表示调用栈的深度
 	if ok {
-		l.cachedFile = filepath.Base(file)
-		l.cachedLine = line
-		l.cacheValid = true
-		l.lastCacheTime = now
-		return fmt.Sprintf("%s:%d ", l.cachedFile, l.cachedLine)
+		return fmt.Sprintf("%s:%d ", filepath.Base(file), line)
 	}
-
 	return ""
 }
 
@@ -424,10 +406,10 @@ func (l *Logger) log(level int, format string, args ...interface{}) {
 	}
 	msg := builder.String()
 
-	// 获取文件行号信息（带缓存）
+	// 获取文件行号信息（实时）
 	fileLine := ""
 	if l.config.ShowFileLine {
-		fileLine = l.getCachedFileInfo()
+		fileLine = l.getFileInfo()
 	}
 
 	// 获取当前时间并预格式化
