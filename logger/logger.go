@@ -659,16 +659,18 @@ func (l *Logger) Errorf(format string, args ...interface{}) { l.log(ERROR, forma
 //
 // 参数：
 //   - newPHRYNUS: 新的日志标识符
+//   - ShowFileLine: 是否显示文件行号
 //
 // 返回值：
 //   - *Logger: 新的日志记录器实例
-func (l *Logger) Clone(newPHRYNUS string) *Logger {
+func (l *Logger) Clone(newPHRYNUS string, ShowFileLine bool) *Logger {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
 	// 复制配置并更新PHRYNUS
 	newConfig := l.config
 	newConfig.PHRYNUS = newPHRYNUS
+	newConfig.ShowFileLine = ShowFileLine
 
 	// 创建新的Logger实例，共享异步写入系统
 	newLogger := &Logger{
