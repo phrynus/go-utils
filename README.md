@@ -2,7 +2,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.24-blue.svg)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.4.0-orange.svg)](https://github.com/phrynus/go-utils/releases)
+[![Version](https://img.shields.io/badge/Version-v1.5.2-orange.svg)](https://github.com/phrynus/go-utils/releases)
 
 Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人、飞书机器人、用户API客户端等功能。
 
