@@ -15,13 +15,12 @@ import (
 )
 
 var ipEndpoints = []string{
-	"https://v6r.ipip.net/",          // 0.438 真
 	"https://icanhazip.com/",         // 0.070
 	"https://checkip.amazonaws.com/", // 0.160
 	"https://api.ipify.org/",         // 0.264
+	"https://v6r.ipip.net/",          // 0.438 真
 	"https://ipinfo.io/ip",           // 0.462
 	"https://api.ip.sb/ip",           // 0.921
-
 }
 
 var Ip string = "0.0.0.0"
@@ -96,11 +95,11 @@ func GetLocalIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "0.0.0.0"
-
 	}
 	defer conn.Close()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
 	return localAddr.IP.String()
 }
 
