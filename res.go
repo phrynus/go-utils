@@ -37,9 +37,9 @@ func S(c *gin.Context, data interface{}, msg string) {
 	Res := ResData[interface{}]{
 		Code: 200,
 		Msg:  msg,
-		Data: data,
 		Time: now,
-		Sign: Sign(fmt.Sprintf("%d", now), msg, data, now),
+		Data: data,
+		Sign: Sign(fmt.Sprintf("%d", now), 200, msg, now, data),
 	}
 
 	c.JSON(http.StatusOK, Res)
@@ -62,7 +62,8 @@ func E(c *gin.Context, code int, msg string) {
 		Code: code,
 		Msg:  msg,
 		Time: now,
-		Sign: Sign(fmt.Sprintf("%d", now), msg, nil, now),
+		Data: gin.H{},
+		Sign: Sign(fmt.Sprintf("%d", now), code, msg, now, gin.H{}),
 	}
 
 	// 根据错误码设置正确的HTTP状态码
