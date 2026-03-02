@@ -51,7 +51,6 @@ func Sign(appKey string, data ...interface{}) string {
 		return ""
 	}
 	stringToSign := string(jsonBytes) + appKey
-	fmt.Println(stringToSign)
 	h := hmac.New(sha256.New, []byte(appKey))
 	if _, err := h.Write([]byte(stringToSign)); err != nil {
 		return ""
