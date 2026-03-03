@@ -439,15 +439,8 @@ func (u UnknownType) ToUnsafePointer() interface{} {
 // --------------------------------------------------------------------
 
 // unmarshalWithTypeConversion 根据目标类型进行智能转换
-func (u UnknownType) SmartUnmarshal(data []byte, v interface{}) error {
-	// 解析JSON到interface{}
-	var rawData interface{}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-
-	if err := decoder.Decode(&rawData); err != nil {
-		return err
-	}
+func (u UnknownType) SmartUnmarshal(v interface{}) error {
+	data := u.Value
 
 	// 获取目标值的反射
 	rv := reflect.ValueOf(v)
@@ -456,7 +449,7 @@ func (u UnknownType) SmartUnmarshal(data []byte, v interface{}) error {
 	}
 
 	// 填充数据
-	return setValue(rv.Elem(), rawData)
+	return setValue(rv.Elem(), data)
 }
 
 // fillStruct 递归填充结构体
