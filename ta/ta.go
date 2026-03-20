@@ -467,35 +467,12 @@ func generateArrayExtractor(indexes *arrayFieldIndexes) klineExtractor {
 			return nil, fmt.Errorf("不支持的时间字段类型: %v", timeElem.Kind())
 		}
 
-		// 辅助函数：提取数值元素
+		// 提取数值元素：使用公共函数，支持 interface{} 自动解包
 		extractNumeric := func(index int) (float64, error) {
 			if index < 0 || index >= arrayLen {
 				return 0, fmt.Errorf("索引超出范围: %d", index)
 			}
-			elem := item.Index(index)
-			// 处理 interface{} 类型
-			if elem.Kind() == reflect.Interface {
-				elem = elem.Elem()
-			}
-
-			switch elem.Kind() {
-			case reflect.Float64:
-				return elem.Float(), nil
-			case reflect.Float32:
-				return float64(elem.Float()), nil
-			case reflect.Int, reflect.Int64:
-				return float64(elem.Int()), nil
-			case reflect.Int32:
-				return float64(elem.Int()), nil
-			case reflect.Uint, reflect.Uint64:
-				return float64(elem.Uint()), nil
-			case reflect.Uint32:
-				return float64(elem.Uint()), nil
-			case reflect.String:
-				return strconv.ParseFloat(elem.String(), 64)
-			default:
-				return 0, fmt.Errorf("不支持的数值类型: %v", elem.Kind())
-			}
+			return reflectNumericToFloat(item.Index(index))
 		}
 
 		var err error
@@ -598,30 +575,12 @@ func extractKlineDataFromArray(item reflect.Value, indexes *arrayFieldIndexes) (
 		return 0, "", "", "", "", "", fmt.Errorf("数组长度不足，需要至少%d个元素，当前只有%d个", maxIndex+1, arrayLen)
 	}
 
-	// 辅助函数：将数组元素转换为字符串
+	// 辅助函数：使用公共函数转换数组元素为字符串，支持 interface{} 自动解包
 	convertToString := func(index int) string {
 		if index < 0 || index >= arrayLen {
 			return ""
 		}
-		elem := item.Index(index)
-		switch elem.Kind() {
-		case reflect.String:
-			return elem.String()
-		case reflect.Float64:
-			return strconv.FormatFloat(elem.Float(), 'f', -1, 64)
-		case reflect.Float32:
-			return strconv.FormatFloat(elem.Float(), 'f', -1, 32)
-		case reflect.Int, reflect.Int64:
-			return strconv.FormatInt(elem.Int(), 10)
-		case reflect.Int32:
-			return strconv.FormatInt(elem.Int(), 10)
-		case reflect.Uint, reflect.Uint64:
-			return strconv.FormatUint(elem.Uint(), 10)
-		case reflect.Uint32:
-			return strconv.FormatUint(elem.Uint(), 10)
-		default:
-			return fmt.Sprintf("%v", elem.Interface())
-		}
+		return reflectToString(item.Index(index))
 	}
 
 	// 根据配置的索引提取字段
@@ -641,18 +600,46 @@ func extractKlineDataFromArray(item reflect.Value, indexes *arrayFieldIndexes) (
 	return
 }
 
-// max 返回多个整数中的最大值
-func max(values ...int) int {
-	if len(values) == 0 {
-		return 0
+// reflectNumericToFloat 将 reflect.Value 中的数值类型转换为 float64
+func reflectNumericToFloat(v reflect.Value) (float64, error) {
+	if v.Kind() == reflect.Interface && !v.IsNil() {
+		v = v.Elem()
 	}
-	maxVal := values[0]
-	for _, v := range values[1:] {
-		if v > maxVal {
-			maxVal = v
-		}
+	switch v.Kind() {
+	case reflect.Float64:
+		return v.Float(), nil
+	case reflect.Float32:
+		return float64(v.Float()), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return float64(v.Int()), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return float64(v.Uint()), nil
+	case reflect.String:
+		return strconv.ParseFloat(v.String(), 64)
+	default:
+		return 0, fmt.Errorf("不支持的数值类型: %v", v.Kind())
 	}
-	return maxVal
+}
+
+// reflectToString 将 reflect.Value 转换为字符串
+func reflectToString(v reflect.Value) string {
+	if v.Kind() == reflect.Interface && !v.IsNil() {
+		v = v.Elem()
+	}
+	switch v.Kind() {
+	case reflect.String:
+		return v.String()
+	case reflect.Float64:
+		return strconv.FormatFloat(v.Float(), 'f', -1, 64)
+	case reflect.Float32:
+		return strconv.FormatFloat(float64(v.Float()), 'f', -1, 32)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(v.Uint(), 10)
+	default:
+		return fmt.Sprintf("%v", v.Interface())
+	}
 }
 
 // NewKlineDatas 创建新的K线数据集合

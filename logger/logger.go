@@ -22,6 +22,7 @@ const (
 	DEBUG        // 调试级别：用于记录调试信息，帮助开发人员排查问题
 	WARN         // 警告级别：用于记录可能的问题或异常情况，但不影响系统正常运行
 	ERROR        // 错误级别：用于记录严重错误，会导致程序退出
+	TEXT         // 文本
 )
 
 // LogConfig 日志配置结构体
@@ -143,7 +144,7 @@ func NewLogger(config LogConfig) (*Logger, error) {
 		DEBUG: color.BgRGB(55, 66, 250).AddRGB(255, 255, 255),
 		WARN:  color.BgRGB(255, 128, 0).AddRGB(255, 255, 255),
 		ERROR: color.BgRGB(231, 76, 60).AddRGB(255, 255, 255),
-		4:     color.RGB(99, 99, 99),
+		TEXT:  color.RGB(99, 99, 99),
 	}
 
 	logger := &Logger{
@@ -234,9 +235,9 @@ func (l *Logger) processLogEntry(entry *logEntry) {
 	}
 
 	// 错误级别直接退出
-	if entry.level == ERROR {
-		os.Exit(1)
-	}
+	// if entry.level == ERROR {
+	// 	os.Exit(1)
+	// }
 }
 
 // formatLogEntry 格式化日志条目到缓冲区
@@ -273,7 +274,7 @@ func (l *Logger) writeToConsole(entry *logEntry) {
 		fileLineStr := entry.fileLine
 
 		fmt.Printf("%s%s %s%s\n",
-			l.colorMap[4].Sprint(title),
+			l.colorMap[TEXT].Sprint(title),
 			l.colorMap[entry.level].Sprint(codeLevel),
 			fileLineStr,
 			entry.message)

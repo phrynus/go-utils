@@ -16,7 +16,7 @@ import (
 
 var ipEndpoints = []string{
 	"https://icanhazip.com/",         // 0.070
-	"https://checkip.amazonaws.com/", // 0.160
+	"https://checkip.amazonaws.com/", // 0.1600
 	"https://api.ipify.org/",         // 0.264
 	"https://v6r.ipip.net/",          // 0.438 真
 	"https://ipinfo.io/ip",           // 0.462
@@ -542,17 +542,19 @@ func GetMachineCode() string {
 
 // 取当前电脑代理
 func GetProxy() (string, string) {
-	httpProxy := os.Getenv("http_proxy")
-	if httpProxy == "" {
-		httpProxy = os.Getenv("HTTP_PROXY")
-	}
-
-	httpsProxy := os.Getenv("https_proxy")
-	if httpsProxy == "" {
-		httpsProxy = os.Getenv("HTTPS_PROXY")
-	}
-
+	httpProxy := getEnvWithVariants("http_proxy", "HTTP_PROXY", "Http_Proxy")
+	httpsProxy := getEnvWithVariants("https_proxy", "HTTPS_PROXY", "Https_Proxy")
 	return httpProxy, httpsProxy
+}
+
+// getEnvWithVariants 依次检查多个可能的环境变量名，返回第一个非空值
+func getEnvWithVariants(variants ...string) string {
+	for _, v := range variants {
+		if val := os.Getenv(v); val != "" {
+			return val
+		}
+	}
+	return ""
 }
 
 // ========== 网络工具 ==========

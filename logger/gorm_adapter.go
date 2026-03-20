@@ -70,7 +70,7 @@ func (l *GormLogger) Warn(ctx context.Context, msg string, data ...interface{}) 
 // Error 打印Error级别日志（实际使用Warn级别）
 func (l *GormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormLogger.Error {
-		l.logger.Warnf(msg, data...)
+		l.logger.Errorf(msg, data...)
 	}
 }
 

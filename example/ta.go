@@ -30,7 +30,7 @@ func TestTa() {
 
 // testFuturesKline 测试获取合约K线并计算技术指标
 func testFuturesKline(client *futures.Client) {
-	fmt.Println("======= 获取合约市场K线数据 =======\n")
+	fmt.Println("======= 获取合约市场K线数据 =======")
 
 	// 设置参数
 	symbol := "ETHUSDT"

@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/phrynus/go-utils/uyz-u/crypto"
+	"github.com/phrynus/go-utils/crypto"
 )
 
 // APIResponse 镜像平台返回的顶层结构
@@ -279,7 +279,7 @@ func (c *Client) buildSecurePayload(payload any) (map[string]string, error) {
 	}
 
 	if !c.cfg.DisableSignature {
-		body["sign"] = crypto.MD5Hex(string(jsonBytes) + c.cfg.AppKey)
+		body["sign"] = crypto.MD5(string(jsonBytes) + c.cfg.AppKey)
 	}
 	return body, nil
 }
@@ -351,7 +351,7 @@ func (c *Client) verifyResponseSignature(resp APIResponse) error {
 	}
 
 	// 计算签名：MD5(JSON字符串 + AppKey)
-	expectedSign := crypto.MD5Hex(strconv.Itoa(resp.Code) + strconv.FormatInt(resp.Time, 10) + c.cfg.AppKey)
+	expectedSign := crypto.MD5(strconv.Itoa(resp.Code) + strconv.FormatInt(resp.Time, 10) + c.cfg.AppKey)
 	// 比较签名（不区分大小写）
 	if !strings.EqualFold(expectedSign, resp.Sign) {
 		return fmt.Errorf("签名验证失败: 期望 %s, 实际 %s", expectedSign, resp.Sign)

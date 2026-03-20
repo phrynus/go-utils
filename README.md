@@ -1,18 +1,6 @@
 # go-utils
 
-[![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.24-blue.svg)](https://golang.org/)
-[![License](https://img.shields.io/badge/License-AGPL--3.0-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.5.5-orange.svg)](https://github.com/phrynus/go-utils/releases)
-
-Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人、飞书机器人、用户API客户端等功能。
-
-## 功能模块
-
-- **[ta](./ta/)** - 技术分析指标库，提供多种技术指标计算（MACD、RSI、KDJ、布林带等）
-- **[logger](./logger/)** - 高性能日志记录器，支持日志轮转、压缩、彩色输出、多级别日志、Logger克隆和父子关系管理
-- **[dingtalk](./dingtalk/)** - 钉钉机器人客户端，支持发送文本、Markdown、链接、ActionCard、FeedCard等消息
-- **[feishu](./feishu/)** - 飞书机器人客户端，支持发送文本、富文本、图片、分享群名片、消息卡片等
-- **[uyz-u](./uyz-u/)** - U验证 用户API客户端，支持加密通信、签名验证、登录、支付等功能
+Go 语言常用工具库集，提供类型转换、Web 响应处理、系统信息、技术指标、消息推送等实用功能。
 
 ## 安装
 
@@ -20,218 +8,131 @@ Go 语言工具库，提供技术分析指标、日志记录、钉钉机器人�
 go get github.com/phrynus/go-utils
 ```
 
-## 快速开始
+## 模块概览
 
-### 技术分析指标
+| 模块 | 路径 | 说明 |
+|------|------|------|
+| HTTP响应 | `res.go` | Gin统一响应 |
+| 系统工具 | `system.go` | 系统信息、机器码 |
+| 环境变量 | `env.go` | 环境变量加载 |
+| Unknown | `unknown` | 任意类型智能转换 |
+| 钉钉 | `dingtalk` | 钉钉消息推送 |
+| 飞书 | `feishu` | 飞书消息推送 |
+| 日志 | `logger` | 高性能日志库 |
+| 技术指标 | `ta` | K线技术分析指标 |
+| 加密 | `crypto` | 多种加密、UUID、MD5 |
+| U验证平台SDK | `uyz-u` | Uverif API客户端 |
 
-```go
-package main
+---
 
-import (
-    "context"
-    "log"
-    
-    "github.com/adshao/go-binance/v2/futures"
-    "github.com/phrynus/go-utils/ta"
-)
+## unknown - 任意类型智能转换
 
-func main() {
-    // 获取币安K线数据
-    client := futures.NewClient("", "")
-    binanceKline, err := client.NewKlinesService().
-        Limit(1000).
-        Symbol("BTCUSDT").
-        Interval("1h").
-        Do(context.Background())
-    if err != nil {
-        log.Fatal(err)
-    }
+- ✅ 20+ 种类型转换（Bool、Int/Uint/Float 系列、Complex、Duration、Time、String、Bytes、Array、Map、Struct、指针、通道、函数）
+- ✅ 智能类型推断（自动识别 string/int/float/bool/json.Number 等多种输入类型）
+- ✅ 零值安全（所有转换方法均提供 Must 系列，支持默认值参数，nil 值不 panic）
+- ✅ 丰富的时间解析（RFC3339、RFC1123、紧凑格式、时间戳、JSON Date 等 30+ 种格式）
+- ✅ 嵌套 Map 访问（支持 `user.profile.name` 形式的点号路径）
+- ✅ SmartUnmarshal（JSON 字符串或 Map 自动填充到任意目标结构体，支持多种 key 匹配策略）
 
-    // 转换为工具库格式
-    kline, err := ta.NewKlineDatas(binanceKline, true)
-    if err != nil {
-        log.Fatal(err)
-    }
+👉 详细文档：[unknown/README.md](unknown/README.md)
 
-    // 计算技术指标
-    macd, _ := kline.MACD("close", 12, 26, 9)
-    rsi, _ := kline.RSI(14, "close")
-    atr, _ := kline.ATR(14)
-}
-```
+---
 
-更多示例请查看 [ta/README.md](./ta/README.md)
+## crypto - 加密工具集
 
-### 日志记录
+- ✅ 密码哈希（bcrypt）
+- ✅ UUID v7 生成
+- ✅ MD5 签名
 
-```go
-package main
+👉 详细文档：[crypto/README.md](crypto/README.md)
 
-import (
-    "fmt"
-    "github.com/phrynus/go-utils/logger"
-)
+---
 
-func main() {
-    // 创建日志记录器
-    log, err := logger.NewLogger(logger.LogConfig{
-        Filename: "main.log", // log filename
-        LogDir:   "logs",     // log directory
-        MaxSize:  50 * 1024,  // KB
-        StdoutLevels: map[int]bool{
-            logger.INFO:  true,
-            logger.DEBUG: false,
-            logger.WARN:  true,
-            logger.ERROR: true,
-        },
-        ColorOutput:  true,
-        ShowFileLine: true,
-    })
-    if err != nil {
-        panic(err)
-    }
+## dingtalk - 钉钉消息推送
 
-    // 使用 defer 确保程序退出时关闭日志
-    defer func() {
-        if err := log.Close(); err != nil {
-            fmt.Printf("关闭日志记录器失败: %v\n", err)
-        }
-    }()
+- ✅ 文本消息
+- ✅ Markdown消息
+- ✅ 链接消息
+- ✅ ActionCard消息（独立跳转/整体跳转）
+- ✅ FeedCard消息
+- ✅ @用户功能
+- ✅ 签名验证
 
-    // 克隆子Logger用于不同模块
-    dbLog := log.Clone("DATABASE")
-    apiLog := log.Clone("API")
+👉 详细文档：[dingtalk/README.md](dingtalk/README.md)
 
-    // 使用日志
-    log.Info("应用程序启动")
-    dbLog.Info("数据库连接初始化")
-    apiLog.Info("API服务器启动")
+---
 
-    // 子Logger可以独立管理
-    defer dbLog.Close()  // 只关闭数据库Logger
+## feishu - 飞书消息推送
 
-    // 主Logger关闭时会自动关闭所有相关Logger
-}
-```
+- ✅ 文本消息
+- ✅ 富文本消息（Post）
+- ✅ 图片消息
+- ✅ 分享群名片
+- ✅ 消息卡片（Interactive）
+- ✅ 签名验证
+- ✅ 富文本元素辅助函数
 
-更多示例和详细功能说明请查看 [logger/README.md](./logger/README.md)
+👉 详细文档：[feishu/README.md](feishu/README.md)
 
-### 钉钉机器人
+---
 
-```go
-package main
+## logger - 高性能日志库
 
-import "github.com/phrynus/go-utils/dingtalk"
+- ✅ 多种日志级别（INFO、DEBUG、WARN、ERROR）
+- ✅ 日志文件轮转（按大小）
+- ✅ 自动压缩归档文件（gzip）
+- ✅ 控制台彩色输出
+- ✅ 显示文件名和行号
+- ✅ 缓冲区提高性能
+- ✅ 并发安全
+- ✅ Logger克隆和父子关系管理
+- ✅ 主Logger关闭时级联关闭所有子Logger
 
-func main() {
-    dt := dingtalk.NewDingtalk("your_access_token").WithSecret("your_secret")
-    
-    // 发送文本消息
-    err := dt.SendText("Hello, DingTalk!", nil)
-    
-    // 发送Markdown消息
-    title := "系统通知"
-    text := "## 系统维护通知\n请提前做好准备！"
-    at := &dingtalk.AtMeta{IsAtAll: true}
-    
-    err = dt.SendMarkdown(title, text, at)
-}
-```
+👉 详细文档：[logger/README.md](logger/README.md)
 
-更多示例请查看 [dingtalk/README.md](./dingtalk/README.md) 或 [example/dingtalk.go](./example/dingtalk.go)
+---
 
-### 飞书机器人
+## ta - 技术分析指标库
 
-```go
-package main
+- ✅ 20+种技术分析指标
+- ✅ 兼容 go-binance 库K线数据结构
+- ✅ 自动识别多种K线数据格式（结构体/数组）
+- ✅ 高性能并发处理
+- ✅ 支持动态添加K线数据
 
-import "github.com/phrynus/go-utils/feishu"
+**支持指标**：EMA、SMA、MACD、RSI、KDJ、BOLL、ATR、ADX、CCI、OBV、DPO、Stochastic RSI、SuperTrend、T3、VR、Williams %R、RMA、CMF、JingZheMA
 
-func main() {
-    // 创建飞书客户端（使用webhook URL和密钥）
-    fs := feishu.NewFeiShu("https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id").
-        WithSecret("your_secret")
-    
-    // 发送文本消息
-    err := fs.SendText("Hello, FeiShu! 这是一条测试消息。")
-    
-    // 发送富文本消息
-    post := &feishu.Post{
-        ZhCn: &feishu.PostDetail{
-            Title: "系统监控告警",
-            Content: [][]feishu.PostElem{
-                {
-                    {Tag: "text", Text: "告警时间: 2024-01-01 14:30:00"},
-                },
-                {
-                    {Tag: "text", Text: "告警级别: "},
-                    {Tag: "text", Text: "严重"},
-                },
-                {
-                    {Tag: "text", Text: "查看详情: "},
-                    {Tag: "a", Text: "点击这里", Href: "https://example.com"},
-                },
-                {
-                    {Tag: "at", UserId: "all"}, // @所有人
-                    {Tag: "text", Text: " 请及时处理！"},
-                },
-            },
-        },
-    }
-    
-    err = fs.SendPost(post)
-}
-```
+👉 详细文档：[ta/README.md](ta/README.md)
 
-更多示例请查看 [feishu/README.md](./feishu/README.md) 或 [example/feishu.go](./example/feishu.go)
+---
 
-### U验证 用户API客户端
+## crypto - 加密工具集
 
-```go
-package main
+- ✅ AES-128/192/256 对称加密（CBC 模式，PKCS7 填充）
+- ✅ DES 对称加密（CBC 模式，PKCS7 填充）
+- ✅ RC4 流加密
+- ✅ RSA 非对称加密（PKCS#1 v1.5，支持自动分块）
+- ✅ bcrypt 密码哈希
+- ✅ MD5 散列
+- ✅ UUID v7 生成（时间有序）
+- ✅ Base64 / Hex 统一编码解码
 
-import (
-    "context"
-    "log"
-    user "github.com/phrynus/go-utils/uyz-u"
-)
+👉 详细文档：[crypto/README.md](crypto/README.md)
 
-func main() {
-    client, err := user.New(user.ClientConfig{
-        BaseURL:          "https://example.com/api/user",
-        AppID:            1003,
-        AppKey:           "your_app_key",
-        Version:          "1.0.0",
-        VersionIndex:     "web",
-        ClientPrivateKey: rsaClientPrivateKey,
-        ServerPublicKey:  rsaServerPublicKey,
-        EncryptionMode:   user.EncryptionRSA,
-        DisableSignature: false,
-    })
-    if err != nil {
-        log.Fatalf("create client: %v", err)
-    }
+## uyz-u - U验证平台 API 客户端
 
-    // 登录
-    login, err := client.NewLogin().
-        Account("username").
-        Password("password").
-        UDID("device-id").
-        Do(context.Background())
-    if err != nil {
-        log.Fatalf("login failed: %v", err)
-    }
-    
-    fmt.Println(login)
-}
-```
+- ✅ 多种加密模式（RSA、AES、DES、RC4、None）
+- ✅ 完整的验签系统
+- ✅ 自动Token管理
+- ✅ 代理配置支持
+- ✅ 链式API调用
 
-更多示例请查看 [uyz-u/README.md](./uyz-u/README.md) 或 [example/uyz-u.go](./example/uyz-u.go)
+**功能模块**：用户认证、多平台登录（QQ/微信）、用户信息、账号绑定、设备管理、商品和支付、消息管理、云函数
+
+👉 详细文档：[uyz-u/README.md](uyz-u/README.md)
+
+---
 
 ## 许可证
 
-本项目采用 GNU Affero General Public License v3.0 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 免责声明
-
-本项目仅提供技术分析工具，不构成投资建议。数字货币和合约交易具有高风险，请谨慎使用。
+[AGPL-3.0](LICENSE)

@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 )
 
-// MD5Hex 返回输入的小写 32 字符摘要
-func MD5Hex(s string) string {
+// MD5 返回输入的MD5值
+func MD5(s string) string {
 	sum := md5.Sum([]byte(s))
 	return hex.EncodeToString(sum[:])
 }
