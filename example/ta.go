@@ -124,4 +124,7 @@ func calculateIndicators(klineDatas ta.KlineDatas, symbol, interval string) {
 
 	directionNum := jingzhema.DirectionNum()
 	fmt.Printf("JingZheMA方向数：%v\n", directionNum)
+
+	// 卡住
+	select {}
 }
