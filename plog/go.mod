@@ -1,4 +1,4 @@
-module logger
+module plog
 
 go 1.26.3
 

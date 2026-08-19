@@ -1,6 +1,6 @@
-# logger
+# plog
 
-零外部依赖、单文件复制即用的 Go 日志库。核心 `logger.go` 只用标准库，适配器按需拷贝。
+零外部依赖、单文件复制即用的 Go 日志库。核心 `plog.go` 只用标准库，适配器按需拷贝。
 
 ## 为什么用它
 
@@ -13,10 +13,10 @@
 ## 文件清单
 
 ```
-logger.go           ← 核心（必须），零外部依赖
-adapter_fiber.go    ← Fiber 中间件（需要 fiber/v3）
-adapter_gin.go      ← Gin 中间件（需要 gin）
-adapter_gorm.go     ← GORM SQL 日志（需要 gorm）
+plog.go           ← 核心（必须），零外部依赖
+plog_fiber.go       ← Fiber 中间件（需要 fiber/v3）
+plog_gin.go         ← Gin 中间件（需要 gin）
+plog_gorm.go        ← GORM SQL 日志（需要 gorm）
 ```
 
 ## 快速开始
@@ -24,25 +24,25 @@ adapter_gorm.go     ← GORM SQL 日志（需要 gorm）
 ```go
 package main
 
-import "yourproject/logger"
+import "yourproject/plog"
 
 func main() {
-    log, err := logger.New(logger.Config{
+    logger, err := plog.New(plog.Config{
         Filename: "app.log",       // 必填
         Tag:      "APP",
-        Async:    true,            // 高并发场景推荐
+        BufferSize: 4096,          // 高并发场景推荐
         Compress: true,            // 轮转后自动 gzip
     })
     if err != nil {
         panic(err)
     }
-    defer log.Close()
+    defer logger.Close()
 
-    log.Info("服务启动")
-    log.Infof("监听 :%d", 8080)
-    log.Debugf("配置项: %+v", cfg)
-    log.Warn("响应时间偏长")
-    log.Errorf("连接失败: %v", err)
+    logger.Info("服务启动")
+    logger.Infof("监听 :%d", 8080)
+    logger.Debugf("配置项: %+v", cfg)
+    logger.Warn("响应时间偏长")
+    logger.Errorf("连接失败: %v", err)
 }
 ```
 
@@ -52,7 +52,7 @@ func main() {
 go run ./demo/
 ```
 
-测试套件（项目内 `logger_test/` 目录，不自动删除）：
+测试套件（项目内 `log_test/` 目录，不自动删除）：
 
 ```bash
 go run ./cmd/test/
@@ -72,13 +72,14 @@ go run ./cmd/test/
 | `Async`       | `bool`   | `false`           | `true` 启用异步写入                                         |
 | `BufferSize`  | `int`    | `4096`            | 异步 channel 容量                                           |
 | `Compress`    | `bool`   | `false`           | `true` 轮转后自动 gzip 压缩旧文件                           |
+| `MaxBackups`  | `int`    | `5`               | 保留的压缩日志份数，超过自动删除（仅 `Compress` 生效）     |
 
 ## API
 
 ### 创建与关闭
 
 ```go
-log, err := logger.New(cfg)   // 创建
+log, err := log.New(cfg)   // 创建
 log.Close()                   // 关闭（刷新缓冲 → 关闭文件）
 log.Flush()                   // 强制刷新缓冲到磁盘
 ```
@@ -110,11 +111,11 @@ log.Close() // 父日志器关闭才真正关文件
 
 | 常量           | 值  | 用途                           |
 | -------------- | --- | ------------------------------ |
-| `logger.DEBUG` | `0` | 调试，生产可关                 |
-| `logger.INFO`  | `1` | 正常流程                       |
-| `logger.WARN`  | `2` | 警告                           |
-| `logger.ERROR` | `3` | 错误                           |
-| `logger.NONE`  | `4` | 关闭输出（用于 `StdoutLevel`） |
+| `log.DEBUG` | `0` | 调试，生产可关                 |
+| `log.INFO`  | `1` | 正常流程                       |
+| `log.WARN`  | `2` | 警告                           |
+| `log.ERROR` | `3` | 错误                           |
+| `log.NONE`  | `4` | 关闭输出（用于 `StdoutLevel`） |
 
 ## 日志格式
 
@@ -154,11 +155,11 @@ log.Close() // 父日志器关闭才真正关文件
 ### Fiber（需复制 `adapter_fiber.go`）
 
 ```go
-log, _ := logger.New(logger.Config{Filename: "app.log"})
+log, _ := log.New(log.Config{Filename: "app.log"})
 defer log.Close()
 
 app := fiber.New()
-app.Use(log.FiberLogger())    // 请求日志（按状态码自动选级别）
+app.Use(log.FiberLog())    // 请求日志（按状态码自动选级别）
 app.Use(log.FiberRecovery())  // panic 恢复
 ```
 
@@ -166,7 +167,7 @@ app.Use(log.FiberRecovery())  // panic 恢复
 
 ```go
 r := gin.New()
-r.Use(log.GinLogger())
+r.Use(log.GinLog())
 r.Use(log.GinRecovery())
 ```
 
@@ -174,14 +175,14 @@ r.Use(log.GinRecovery())
 
 ```go
 db, err := gorm.Open(dialector, &gorm.Config{
-    Logger: log.NewGormLogger(),
+    Log: log.NewGormLog(),
 })
 // 自动记录 SQL 执行时间、慢查询、错误
 ```
 
 ## 设计原则
 
-- **零依赖核心** — `logger.go` 只用标准库，ANSI 颜色手写，无 `fatih/color`
+- **零依赖核心** — `log.go` 只用标准库，ANSI 颜色手写，无 `fatih/color`
 - **按需复制** — 用哪个框架拷哪个适配器，不用的不拷
 - **无全局状态** — 没有包级 `log.Info()`，手动 `New()` 管理实例
 - **同步/异步可选** — 小项目同步直写，高并发异步不阻塞

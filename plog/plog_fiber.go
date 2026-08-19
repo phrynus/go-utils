@@ -1,4 +1,4 @@
-package logger
+package plog
 
 import (
 	"time"
@@ -6,13 +6,13 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// FiberLogger 返回一个 Fiber 中间件，将 HTTP 请求日志记入 Logger。
+// FiberLog 返回一个 Fiber 中间件，将 HTTP 请求日志记入 Log。
 //
 // 使用示例：
 //
 //	app := fiber.New()
-//	app.Use(log.FiberLogger())
-func (l *Logger) FiberLogger() func(c fiber.Ctx) error {
+//	app.Use(log.FiberLog())
+func (l *Log) FiberLog() func(c fiber.Ctx) error {
 	sub := l.Sub("FIBER")
 
 	return func(c fiber.Ctx) error {
@@ -50,7 +50,7 @@ func (l *Logger) FiberLogger() func(c fiber.Ctx) error {
 // 使用示例：
 //
 //	app.Use(log.FiberRecovery())
-func (l *Logger) FiberRecovery() func(c fiber.Ctx) error {
+func (l *Log) FiberRecovery() func(c fiber.Ctx) error {
 	sub := l.Sub("FIBER")
 
 	return func(c fiber.Ctx) error {

@@ -18,7 +18,7 @@ go get github.com/phrynus/go-utils
 | Unknown | `unknown` | 任意类型智能转换 |
 | 钉钉 | `dingtalk` | 钉钉消息推送 |
 | 飞书 | `feishu` | 飞书消息推送 |
-| 日志 | `logger` | 高性能日志库 |
+| 日志 | `log` | 高性能日志库 |
 | 技术指标 | `ta` | K线技术分析指标 |
 | 加密 | `crypto` | 多种加密、UUID、MD5 |
 | U验证平台SDK | `uyz-u` | Uverif API客户端 |
@@ -76,7 +76,7 @@ go get github.com/phrynus/go-utils
 
 ---
 
-## logger - 高性能日志库
+## log - 高性能日志库
 
 - ✅ 多种日志级别（INFO、DEBUG、WARN、ERROR）
 - ✅ 日志文件轮转（按大小）
@@ -85,10 +85,10 @@ go get github.com/phrynus/go-utils
 - ✅ 显示文件名和行号
 - ✅ 缓冲区提高性能
 - ✅ 并发安全
-- ✅ Logger克隆和父子关系管理
-- ✅ 主Logger关闭时级联关闭所有子Logger
+- ✅ Log克隆和父子关系管理
+- ✅ 主Log关闭时级联关闭所有子Log
 
-👉 详细文档：[logger/README.md](logger/README.md)
+👉 详细文档：[log/README.md](log/README.md)
 
 ---
 

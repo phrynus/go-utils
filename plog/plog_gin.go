@@ -1,4 +1,4 @@
-package logger
+package plog
 
 import (
 	"time"
@@ -6,13 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GinLogger 返回一个 Gin 中间件，将 HTTP 请求日志记入 Logger。
+// GinLog 返回一个 Gin 中间件，将 HTTP 请求日志记入 Log。
 //
 // 使用示例：
 //
 //	r := gin.New()
-//	r.Use(log.GinLogger())
-func (l *Logger) GinLogger() gin.HandlerFunc {
+//	r.Use(log.GinLog())
+func (l *Log) GinLog() gin.HandlerFunc {
 	sub := l.Sub("GIN")
 
 	return func(c *gin.Context) {
@@ -44,7 +44,7 @@ func (l *Logger) GinLogger() gin.HandlerFunc {
 // 使用示例：
 //
 //	r.Use(log.GinRecovery())
-func (l *Logger) GinRecovery() gin.HandlerFunc {
+func (l *Log) GinRecovery() gin.HandlerFunc {
 	sub := l.Sub("GIN")
 
 	return func(c *gin.Context) {
