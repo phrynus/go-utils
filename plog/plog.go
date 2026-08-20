@@ -48,7 +48,7 @@ type Config struct {
 	// MinLevel 最低记录级别，低于此级别的日志会被丢弃，默认 DEBUG。
 	MinLevel level
 
-	// Stdoutlevel 同时输出到控制台的最低级别，NONE 表示不输出到控制台，默认 INFO。
+	// StdoutLevel 同时输出到控制台的最低级别，NONE 表示不输出到控制台，默认 INFO。
 	StdoutLevel level
 
 	// Color 控制台是否启用 ANSI 彩色输出，默认 true。
@@ -112,9 +112,29 @@ type logEntry struct {
 // New 根据配置创建一个 Log 并打开日志文件。
 // 文件所在目录会自动创建。
 func New(cfg Config) (*Log, error) {
-	// 文档约定 BufferSize 默认 4096；零值会导致无缓冲 channel，高并发下大量日志被丢弃。
+	// 应用文档约定的默认值。
+	// 注意：Go 零值无法区分“未设置”与显式传入 0/false，这里统一按文档默认覆盖，
+	// 因此无法通过零值显式关闭 Color / FileLine，也无法把 StdoutLevel 设为 DEBUG。
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = 4096
+	}
+	if cfg.MaxSize <= 0 {
+		cfg.MaxSize = 50 << 20 // 50MB
+	}
+	if cfg.StdoutLevel == 0 {
+		cfg.StdoutLevel = INFO
+	}
+	if !cfg.Color {
+		cfg.Color = true
+	}
+	if !cfg.FileLine {
+		cfg.FileLine = true
+	}
+	if cfg.Tag == "" {
+		cfg.Tag = "MAIN"
+	}
+	if cfg.MaxBackups <= 0 {
+		cfg.MaxBackups = 5
 	}
 
 	dir := filepath.Dir(cfg.Filename)
@@ -201,7 +221,8 @@ func (l *Log) Close() error {
 	l.flush()
 	l.mu.Unlock()
 
-	l.cw.Wait() // 等待所有压缩协程完成
+	l.cw.Wait()         // 等待所有压缩协程完成
+	l.pruneOldBackups() // 最终清理：此时所有 .gz 均已关闭，可确定删除过期备份
 	return l.file.Close()
 }
 
@@ -606,6 +627,10 @@ func (l *Log) pruneOldBackups() {
 		return
 	}
 
+	// 多个压缩协程可能并发触发清理，串行化避免重复删除同一个文件。
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	dir := filepath.Join(filepath.Dir(l.cfg.Filename), "log")
 	matches, err := filepath.Glob(filepath.Join(dir, "*.gz"))
 	if err != nil {
@@ -616,11 +641,11 @@ func (l *Log) pruneOldBackups() {
 		return
 	}
 
-	// 删除最旧的 (len - MaxBackups) 份
+	// 删除最旧的 (len - MaxBackups) 份。
+	// 删除失败通常是 Windows 下文件正被其他压缩协程占用（瞬时），忽略即可：
+	// 后续 prune 会重试，Close 时还有一次最终清理兜底。
 	for _, m := range matches[:len(matches)-l.cfg.MaxBackups] {
-		if err := os.Remove(m); err != nil {
-			fmt.Fprintf(os.Stderr, "log: remove old backup %s: %v\n", m, err)
-		}
+		_ = os.Remove(m)
 	}
 }
 
@@ -659,14 +684,46 @@ func (l *Log) log(level level, format string, args ...any) {
 
 	// 获取调用位置（文件与行号分开存，延迟到写盘时再拼接，避免此处产生字符串分配）
 	if l.cfg.FileLine {
-		_, file, line, ok := runtime.Caller(3)
-		if ok {
-			entry.file = filepath.Base(file)
+		file, line := callerLocation()
+		if file != "" {
+			entry.file = file
 			entry.line = line
 		}
 	}
 
 	l.sendEntry(entry)
+}
+
+// logEntryNames 是 plog 包内所有日志入口的名称（方法或包级函数），
+// 用于在定位真实调用方时跳过内部帧（兼容编译器内联导致的栈帧偏移）。
+var logEntryNames = map[string]bool{
+	"Debug": true, "Debugf": true, "Info": true, "Infof": true,
+	"Warn": true, "Warnf": true, "Error": true, "Errorf": true,
+	"Sub": true, "Close": true, "Flush": true,
+	"SetDefault": true, "stdInit": true,
+}
+
+// callerLocation 返回真实调用方的文件名（不含路径）与行号。
+// 跳过本包内部的日志入口，避免包装方法被内联后 runtime.Caller 深度偏移。
+func callerLocation() (string, int) {
+	var pcs [16]uintptr
+	n := runtime.Callers(2, pcs[:])
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		fr, more := frames.Next()
+		if !more {
+			return "", 0
+		}
+		// 跳过 *Log 的方法（log / Debug / Info / ...）
+		if strings.Contains(fr.Function, ".(*Log).") {
+			continue
+		}
+		// 跳过包级快捷函数
+		if i := strings.LastIndexByte(fr.Function, '.'); i >= 0 && logEntryNames[fr.Function[i+1:]] {
+			continue
+		}
+		return filepath.Base(fr.File), fr.Line
+	}
 }
 
 // ──────────────────────────── ANSI color ────────────────────────────
