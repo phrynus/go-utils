@@ -19,11 +19,11 @@ import (
 type level uint8
 
 const (
-	DEBUG level = iota // 调试信息
-	INFO               // 正常运行信息
-	WARN               // 警告，不影响运行
-	ERROR              // 错误，需要关注
-	NONE               // 用于关闭输出
+	levelDebug level = iota // 调试信息
+	levelInfo               // 正常运行信息
+	levelWarn               // 警告，不影响运行
+	levelError              // 错误，需要关注
+	levelNone               // 用于关闭输出
 )
 
 // levelNames 级别名称表，包级常量避免每次调用重新分配。
@@ -31,7 +31,7 @@ var levelNames = [...]string{"DEBUG", "INFO", "WARN", "ERROR", "NONE"}
 
 // String 返回级别名称，兼容 fmt.Stringer。
 func (lvl level) String() string {
-	if lvl > NONE {
+	if lvl > levelNone {
 		return "UNKNOWN"
 	}
 	return levelNames[lvl]
@@ -122,7 +122,7 @@ func New(cfg Config) (*Log, error) {
 		cfg.MaxSize = 50 << 20 // 50MB
 	}
 	if cfg.StdoutLevel == 0 {
-		cfg.StdoutLevel = INFO
+		cfg.StdoutLevel = levelInfo
 	}
 	if !cfg.Color {
 		cfg.Color = true
@@ -170,28 +170,28 @@ func New(cfg Config) (*Log, error) {
 // ──────────────────────────── 公开方法 ────────────────────────────
 
 // Debug 记录 DEBUG 级别日志。
-func (l *Log) Debug(args ...any) { l.log(DEBUG, "", args...) }
+func (l *Log) Debug(args ...any) { l.log(levelDebug, "", args...) }
 
 // Debugf 记录 DEBUG 级别格式化日志。
-func (l *Log) Debugf(format string, args ...any) { l.log(DEBUG, format, args...) }
+func (l *Log) Debugf(format string, args ...any) { l.log(levelDebug, format, args...) }
 
 // Info 记录 INFO 级别日志。
-func (l *Log) Info(args ...any) { l.log(INFO, "", args...) }
+func (l *Log) Info(args ...any) { l.log(levelInfo, "", args...) }
 
 // Infof 记录 INFO 级别格式化日志。
-func (l *Log) Infof(format string, args ...any) { l.log(INFO, format, args...) }
+func (l *Log) Infof(format string, args ...any) { l.log(levelInfo, format, args...) }
 
 // Warn 记录 WARN 级别日志。
-func (l *Log) Warn(args ...any) { l.log(WARN, "", args...) }
+func (l *Log) Warn(args ...any) { l.log(levelWarn, "", args...) }
 
 // Warnf 记录 WARN 级别格式化日志。
-func (l *Log) Warnf(format string, args ...any) { l.log(WARN, format, args...) }
+func (l *Log) Warnf(format string, args ...any) { l.log(levelWarn, format, args...) }
 
 // Error 记录 ERROR 级别日志。
-func (l *Log) Error(args ...any) { l.log(ERROR, "", args...) }
+func (l *Log) Error(args ...any) { l.log(levelError, "", args...) }
 
 // Errorf 记录 ERROR 级别格式化日志。
-func (l *Log) Errorf(format string, args ...any) { l.log(ERROR, format, args...) }
+func (l *Log) Errorf(format string, args ...any) { l.log(levelError, format, args...) }
 
 // Flush 强制将缓冲区内容写入磁盘。同步模式可直接调用；
 // 异步模式会触发后台刷新（不保证调用返回时已完成落盘）。
@@ -263,8 +263,8 @@ func stdInit() *Log {
 		std, err = New(Config{
 			Filename:    "app.log",
 			MaxSize:     50 << 10, // 50MB
-			MinLevel:    DEBUG,
-			StdoutLevel: INFO,
+			MinLevel:    levelDebug,
+			StdoutLevel: levelInfo,
 			Color:       true,
 			FileLine:    true,
 			Tag:         "MAIN",
@@ -289,28 +289,28 @@ func SetDefault(cfg Config) {
 }
 
 // Debug 包级快捷函数，自动使用默认日志器（懒加载，零配置）。
-func Debug(args ...any) { stdInit().log(DEBUG, "", args...) }
+func Debug(args ...any) { stdInit().log(levelDebug, "", args...) }
 
 // Debugf 包级快捷函数。
-func Debugf(format string, args ...any) { stdInit().log(DEBUG, format, args...) }
+func Debugf(format string, args ...any) { stdInit().log(levelDebug, format, args...) }
 
 // Info 包级快捷函数。
-func Info(args ...any) { stdInit().log(INFO, "", args...) }
+func Info(args ...any) { stdInit().log(levelInfo, "", args...) }
 
 // Infof 包级快捷函数。
-func Infof(format string, args ...any) { stdInit().log(INFO, format, args...) }
+func Infof(format string, args ...any) { stdInit().log(levelInfo, format, args...) }
 
 // Warn 包级快捷函数。
-func Warn(args ...any) { stdInit().log(WARN, "", args...) }
+func Warn(args ...any) { stdInit().log(levelWarn, "", args...) }
 
 // Warnf 包级快捷函数。
-func Warnf(format string, args ...any) { stdInit().log(WARN, format, args...) }
+func Warnf(format string, args ...any) { stdInit().log(levelWarn, format, args...) }
 
 // Error 包级快捷函数。
-func Error(args ...any) { stdInit().log(ERROR, "", args...) }
+func Error(args ...any) { stdInit().log(levelError, "", args...) }
 
 // Errorf 包级快捷函数。
-func Errorf(format string, args ...any) { stdInit().log(ERROR, format, args...) }
+func Errorf(format string, args ...any) { stdInit().log(levelError, format, args...) }
 
 // Close 关闭默认日志器。
 func Close() {
@@ -364,7 +364,7 @@ func (l *Log) process(e *logEntry) {
 	l.buf.WriteByte('\n')
 
 	// 控制台输出
-	if e.level >= l.cfg.StdoutLevel && l.cfg.StdoutLevel != NONE {
+	if e.level >= l.cfg.StdoutLevel && l.cfg.StdoutLevel != levelNone {
 		l.writeConsole(e)
 	}
 
@@ -489,13 +489,13 @@ func (l *Log) writeConsole(e *logEntry) {
 
 	var bg int
 	switch e.level {
-	case DEBUG:
+	case levelDebug:
 		bg = cBgBlue
-	case INFO:
+	case levelInfo:
 		bg = cBgGreen
-	case WARN:
+	case levelWarn:
 		bg = cBgOrange
-	case ERROR:
+	case levelError:
 		bg = cBgRed
 	}
 	appendAnsi(b, bg, cWhite)
